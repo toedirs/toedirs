@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  toedirs:
+    build:
+      dockerfile: Dockerfile
+
+    volumes:
+      - .:/app:cached
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: cargo leptos watch --hot-reload
+
+    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
+    #network_mode: service:db
+    ports:
+    - "3000:8080"
+
+    # Use "forwardPorts" in **devcontainer.json** to forward an app port locally.
+    # (Adding the "ports" property to this file will not forward from a Codespace.)
+    environment:
+      DB_USER: toedi
+      DB_NAME: toedi
+      DB_PASSWORD: toedi
+      DB_HOST: db
+      PROFILE: debug
+
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: toedi
+      POSTGRES_DB: toedi
+      POSTGRES_PASSWORD: toedi
+    ports:
+    - "5432:5432"
+
+    # Add "forwardPorts": ["5432"] to **devcontainer.json** to forward PostgreSQL locally.
+    # (Adding the "ports" property to this file will not forward from a Codespace.)
+
+volumes:
+  postgres-data:
