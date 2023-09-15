@@ -4,7 +4,7 @@ use axum::extract::Multipart;
 use bytes::Bytes;
 #[cfg(feature = "ssr")]
 use futures_util::stream::StreamExt;
-use leptos::*;
+use leptos::{ev::SubmitEvent, *};
 use leptos_router::*;
 
 // #[server(FitUpload, "/api")]
@@ -26,11 +26,12 @@ use leptos_router::*;
 // }
 
 #[cfg(feature = "ssr")]
-async fn upload_fit_file(mut multipart: Multipart) {
-    while let Some(mut field) = multipart.next_field().await.unwrap() {
+pub async fn upload_fit_file(mut multipart: Multipart) -> axum::http::StatusCode {
+    while let Some(field) = multipart.next_field().await.unwrap() {
         let data = field.bytes().await.unwrap();
-        process_fit_file(data);
+        let _ = process_fit_file(data);
     }
+    axum::http::StatusCode::ACCEPTED
 }
 
 fn process_fit_file(data: Bytes) -> Result<()> {
@@ -41,17 +42,42 @@ fn process_fit_file(data: Bytes) -> Result<()> {
 }
 
 #[component]
-pub fn FitUploadForm(cx: Scope, show_upload_modal: ReadSignal<bool>) -> impl IntoView {
-    let upload_fit_file = create_server_action::<FitUpload>(cx);
+pub fn FitUploadForm(
+    cx: Scope,
+    show_upload_modal: ReadSignal<bool>,
+    show_upload_modal_set: WriteSignal<bool>,
+) -> impl IntoView {
+    let on_submit = move |ev: SubmitEvent| {
+        ev.prevent_default();
+        show_upload_modal_set(false);
+    };
     view! { cx,
         <Show when=move || { show_upload_modal() } fallback=|_| { () }>
-            <div class="relative z-10" role="dialog" aria-modal="true">
-                <Form action="/api/upload_fit_file">
-                    <label>"Upload Fit File"</label>
-                    <input type="file" name="fit_file" multiple/>
-                    <input type="submit" value="Upload"/>
+            <div
+                class="modal bottom-sheet"
+                style="z-index: 1003; display: block; opacity: 1; bottom: 0%"
+            >
+                <Form
+                    action="/api/upload_fit_file"
+                    method="POST"
+                    enctype="multipart/form-data".to_string()
+                >
+                    <div class="modal-content">
+                        // on:submit=on_submit
+                        <h4 class="black-text">"Upload Fit File"</h4>
+                        <div class="row">
+                            <input type="file" name="fit_file" multiple/>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn waves-effect waves-light">
+                            Upload
+                            <i class="material-symbols-rounded right">upload</i>
+                        </button>
+                    </div>
                 </Form>
             </div>
+            <div class="modal-overlay" style="z-index: 1002; display: block; opacity: 0.5;"></div>
         </Show>
     }
 }

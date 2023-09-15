@@ -1,0 +1,33 @@
+/***************
+    Nav List
+***************/
+.table-of-contents {
+  &.fixed {
+    position: fixed;
+  }
+
+  li {
+    padding: 0;
+  }
+
+  a {
+    display: inline-block;
+    font-weight: 400;
+    color: $font-color-medium;
+    padding-left: 16px;
+    height: 2rem;
+    line-height: 2rem;
+    border-left: 1px solid $divider-color;
+    
+    &:hover {
+      color: $font-color-main;
+      padding-left: 15px;
+    }
+    &.active {
+      color: $primary-color;
+      font-weight: 500;
+      padding-left: 14px;
+      border-left: 2px solid $primary-color;
+    }
+  }
+}

@@ -1,0 +1,321 @@
+/* Text Inputs + Textarea
+   ========================================================================== */
+
+/* Style Placeholders */
+::placeholder {
+  color: $placeholder-text-color;
+}
+
+/* Text inputs */
+input:not([type]):not(.browser-default),
+input[type=text]:not(.browser-default),
+input[type=password]:not(.browser-default),
+input[type=email]:not(.browser-default),
+input[type=url]:not(.browser-default),
+input[type=time]:not(.browser-default),
+input[type=date]:not(.browser-default),
+input[type=datetime]:not(.browser-default),
+input[type=datetime-local]:not(.browser-default),
+input[type=month]:not(.browser-default),
+input[type=tel]:not(.browser-default),
+input[type=number]:not(.browser-default),
+input[type=search]:not(.browser-default),
+textarea.materialize-textarea { 
+  outline: none;
+  color: $input-color;
+  width: 100%;  
+  font-size: $md_sys_typescale_body-large_size; //$input-font-size; // => 16 dp
+  height: 56px; // 56dp $input-height;
+}
+
+/* Validation Sass Placeholders */
+%valid-input-style {
+  border-bottom: 1px solid $input-success-color;
+  box-shadow: 0 1px 0 0 $input-success-color;
+}
+%invalid-input-style {
+  border-bottom: $input-invalid-border;
+  box-shadow: 0 1px 0 0 $input-error-color;
+}
+%hidden-text {
+  color: transparent;
+  user-select: none;
+  pointer-events: none;
+}
+/*
+%custom-success-message {
+  content: attr(data-success);
+  color: $input-success-color;
+}
+%custom-error-message {
+  content: attr(data-error);
+  color: $input-error-color;
+}
+*/
+
+.input-field {
+  position: relative;
+  clear: both;
+ 
+  // Default
+
+  input, textarea {
+    box-sizing: border-box; /* https://stackoverflow.com/questions/1377719/padding-within-inputs-breaks-width-100*/
+
+    padding: 0 16px;
+    padding-top: 20px;
+
+    background-color: $surface-color;
+
+    border: none; // reset
+    border-radius: 4px; // md.sys.shape.corner.extra-small.top
+    border-bottom: 1px solid $input-border-color;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+   
+    &:focus:not([readonly]) {
+      border-bottom: 2px solid $input-focus-color;
+      padding-top: 20px + 1px; // add border-width
+    }
+
+    &:disabled, &[readonly="readonly"] {
+      color: $textfield_disabled_color;
+      border-color: $textfield_disabled_outlinecolor;
+      background-color: $textfield_disabled_containercolor;
+    }
+
+    // Label
+    &:focus:not([readonly]) + label {
+      color: $input-focus-color;
+    }
+    &:focus:not([readonly]) + label,
+    &:not([placeholder=' ']) + label,
+    &:not(:placeholder-shown) + label {
+      //font-size: 12px; // md.sys.typescale.body-small.size
+      // https://stackoverflow.com/questions/34717492/css-transition-font-size-avoid-jittering-wiggling
+      transform: scale(calc(12 / 16));
+      top: 8px;
+    }
+
+    &:disabled + label, &[readonly="readonly"] + label {
+      color: $textfield_disabled_color;
+    }
+  }
+
+  input::placeholder {
+    user-select: none;
+  }
+
+  & > label {
+    color: $input-border-color;
+    user-select: none;
+    font-size: 16px;
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    cursor: text;
+    transform-origin: top left;
+    transition:
+      left 0.2s ease-out,
+      top 0.2s ease-out,
+      transform 0.2s ease-out
+    ;
+  }
+
+  // Sub-Infos
+
+  .supporting-text {
+    color: $input-border-color;
+    font-size: 12px;
+    padding: 0 16px;
+    margin-top: 4px;
+  }
+
+  .character-counter {
+    color: $input-border-color;
+    font-size: 12px;
+    float: right;
+    padding: 0 16px;
+    margin-top: 4px;
+  }
+
+  .prefix {
+    position: absolute;
+    left: 12px;
+    top: 16px;
+    user-select: none;
+    display: flex;
+    align-self: center;
+  }
+
+  .suffix {
+    position: absolute;
+    right: 12px;
+    top: 16px;    
+    user-select: none;
+  }
+
+  .prefix ~ input, .prefix ~ textarea {
+    padding-left: calc(12px + 24px + 16px);
+  }
+  .suffix ~ input, .suffix ~ textarea {
+    padding-right: calc(12px + 24px + 16px);
+  }
+  .prefix ~ label {
+    left: calc(12px + 24px + 16px);
+  }
+
+  // Outlined
+
+  &.outlined {
+
+    input, textarea {
+      padding-top: 0;
+
+      background-color: var(--background-color);
+
+      border: 1px solid $input-border-color;
+      border-radius: 4px; // md.sys.shape.corner.extra-small
+
+      &:focus:not([readonly]) {
+        border: 2px solid $input-focus-color;
+        padding-top: 0;
+        margin-left: -1px; // subtract border-width
+
+      }
+      // Label
+      &:focus:not([readonly]) + label {
+        color: $input-focus-color;
+      }
+      &:focus:not([readonly]) + label,
+      &:not([placeholder=' ']) + label,
+      &:not(:placeholder-shown) + label {
+        top: -8px;
+        left: 16px;
+        margin-left: -4px;
+        padding: 0 4px;
+        background-color: var(--background-color);
+      }
+
+      &:disabled, &[readonly="readonly"] {
+        color: $textfield_disabled_color;
+        border-color: $textfield_disabled_outlinecolor;
+      }
+      
+    }
+  }
+
+  // Error
+  &.error {
+    input, textarea {
+      border-color: var(--error-color);
+    }
+    input:focus:not([readonly]), textarea:focus:not([readonly]) {
+      border-color: var(--error-color);
+    }
+    input:focus:not([readonly]) + label, textarea:focus:not([readonly]) + label {
+      color: var(--error-color);
+    }
+    label {
+      color: var(--error-color);
+    }
+    .supporting-text {
+      color: var(--error-color);
+    }
+    .suffix {
+      color: var(--error-color);
+    }
+  }
+}
+
+/* Search Field */
+.searchbar {  
+  .prefix {
+    position: absolute;
+    //left: 12px;
+    padding-left: 1rem;
+    top: 0;
+    user-select: none;
+    display: flex;
+    align-self: center;
+  }
+
+  & > input {
+    border-width: 0;
+    background-color: transparent;
+    padding-left: 3rem;
+  }
+}
+.searchbar.has-sidebar {
+  margin-left: 0;
+  @media #{$large-and-up} {
+    margin-left: $sidenav-width;
+  }
+}
+
+/*
+.input-field input[type=search] {
+  display: block;
+  line-height: inherit;
+
+  .nav-wrapper & {
+    height: inherit;
+    padding-left: 4rem;
+    width: calc(100% - 4rem);
+    border: 0;
+    box-shadow: none;
+  }
+  &:focus:not(.browser-default) {
+    border: 0;
+    box-shadow: none;
+  }
+  & + .label-icon {
+    transform: none;
+    left: 1rem;
+  }
+}
+*/
+
+/* Textarea */
+// Default textarea
+textarea {
+  width: 100%;
+  height: $input-height;
+  background-color: transparent;
+
+  &.materialize-textarea {
+    padding-top: 26px !important;
+    padding-bottom: 4px !important;
+    line-height: normal;
+    overflow-y: hidden; /* prevents scroll bar flash */
+    resize: none;
+    min-height: $input-height;
+    box-sizing: border-box;
+  }
+}
+
+// For textarea autoresize
+.hiddendiv {
+  visibility: hidden;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word; /* future version of deprecated 'word-wrap' */
+  padding-top: 1.2rem; /* prevents text jump on Enter keypress */
+
+  // Reduces repaints
+  position: absolute;
+  top: 0;
+  z-index: -1;
+}
+
+/* Autocomplete Items */
+.autocomplete-content {
+  li {
+    .highlight { color: $font-color-main; }
+    img {
+      height: $dropdown-item-height - 10;
+      width: $dropdown-item-height - 10;
+      margin: 5px 15px;
+    }
+  }
+}

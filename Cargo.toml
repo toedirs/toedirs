@@ -29,6 +29,7 @@ serde = { version = "1.0", features = ["derive"] }
 fitparser = "0.6.0"
 anyhow = "1"
 bytes = "1"
+futures-util = {version = "0.3.28", optional = true}
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
@@ -42,6 +43,7 @@ ssr = [
   "leptos_meta/ssr",
   "leptos_router/ssr",
   "dep:tracing",
+  "dep:futures-util"
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
@@ -64,7 +66,7 @@ site-root = "target/site"
 site-pkg-dir = "pkg"
 
 # [Optional] The source CSS file. If it ends with .sass or .scss then it will be compiled by dart-sass into CSS. The CSS is optimized by Lightning CSS before being written to <site-root>/<site-pkg>/app.css
-style-file = "style/output.css"
+style-file = "style/materialize.scss"
 # Assets source dir. All files found here will be copied and synchronized to site-root.
 # The assets-dir cannot have a sub directory with the same name/path as site-pkg-dir.
 #

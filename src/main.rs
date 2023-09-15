@@ -1,3 +1,4 @@
+mod fit_upload;
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
@@ -7,7 +8,7 @@ async fn main() {
     use toedirs::app::*;
     use toedirs::fileserv::file_and_error_handler;
 
-    simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
+    simple_logger::init_with_level(log::Level::Info).expect("couldn't initialize logging");
 
     // Setting get_configuration(None) means we'll be using cargo-leptos's env values
     // For deployment these variables are:
@@ -22,7 +23,7 @@ async fn main() {
     // build our application with a route
     let app = Router::new()
         .route("/api/*fn_name", post(leptos_axum::handle_server_fns))
-        .route("/api/upload_fit_file", post(upload_fit_file))
+        .route("/api/upload_fit_file", post(fit_upload::upload_fit_file))
         .leptos_routes(&leptos_options, routes, |cx| view! { cx, <App/> })
         .fallback(file_and_error_handler)
         .with_state(leptos_options);
