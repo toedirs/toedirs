@@ -15,3 +15,5 @@ playwright/.cache/
 
 # tailwind
 tailwindcss-linux-x64
+
+.helix/
