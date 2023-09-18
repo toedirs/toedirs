@@ -7,11 +7,11 @@ use leptos_meta::*;
 use leptos_router::*;
 
 #[component]
-pub fn App(cx: Scope) -> impl IntoView {
+pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
-    provide_meta_context(cx);
-    let (show_upload, set_show_upload) = create_signal(cx, false);
-    view! { cx,
+    provide_meta_context();
+    let (show_upload, set_show_upload) = create_signal(false);
+    leptos::view! {
         // injects a stylesheet into the document <head>
         // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/toedirs.css"/>
@@ -20,10 +20,10 @@ pub fn App(cx: Scope) -> impl IntoView {
         <Title text="Welcome to Toedi"/>
 
         // content for this welcome page
-        <Router fallback=|cx| {
+        <Router fallback=|| {
             let mut outside_errors = Errors::default();
             outside_errors.insert_with_default_key(AppError::NotFound);
-            view! { cx, <ErrorTemplate outside_errors/> }.into_view(cx)
+            view! { <ErrorTemplate outside_errors/> }.into_view()
         }>
             <nav class="teal lighten-2">
                 <div class="nav-wrapper">
@@ -54,15 +54,15 @@ pub fn App(cx: Scope) -> impl IntoView {
                         </li>
                     </ul>
                     <FitUploadForm
-                        show_upload_modal=show_upload
-                        show_upload_modal_set=set_show_upload
+                        show=show_upload
+                        show_set=set_show_upload
                     />
                 </div>
             </nav>
             <main>
                 <div class="container">
                     <Routes>
-                        <Route path="" view=|cx| view! { cx, <Overview/> }/>
+                        <Route path="" view=|| view! { <Overview/> }/>
                     </Routes>
                 </div>
             </main>
@@ -71,9 +71,9 @@ pub fn App(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn Overview(cx: Scope) -> impl IntoView {
+fn Overview() -> impl IntoView {
     //overview page
-    view! { cx,
+    view! {
         <div class="row">
             <div class="col s12 m6 l4 p-1">
                 <div class="card-panel teal">Pie Chart</div>

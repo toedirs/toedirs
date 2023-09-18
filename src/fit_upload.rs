@@ -4,18 +4,19 @@ use axum::extract::Multipart;
 use bytes::Bytes;
 #[cfg(feature = "ssr")]
 use futures_util::stream::StreamExt;
+use leptos::logging::log;
 use leptos::{ev::SubmitEvent, *};
 use leptos_router::*;
 
 // #[server(FitUpload, "/api")]
-// pub async fn upload_fit_file(cx: Scope) -> Result<String, ServerFnError> {
+// pub async fn upload_fit_file() -> Result<String, ServerFnError> {
 //     use axum::{
 //         extract::{Field, Multipart},
 //         http::Method,
 //     };
 //     use leptos_axum::extract;
 
-//     extract(cx, |method: Method, multipart: Multipart| async move {
+//     extract(|method: Method, multipart: Multipart| async move {
 //         while let Some(mut field) = multipart.next_field().await.unwrap() {
 //             let name = field.name().unwrap().to_string();
 //             process_fit_file(field.bytes().await.unwrap());
@@ -42,17 +43,13 @@ fn process_fit_file(data: Bytes) -> Result<()> {
 }
 
 #[component]
-pub fn FitUploadForm(
-    cx: Scope,
-    show_upload_modal: ReadSignal<bool>,
-    show_upload_modal_set: WriteSignal<bool>,
-) -> impl IntoView {
+pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> impl IntoView {
     let on_submit = move |ev: SubmitEvent| {
-        ev.prevent_default();
-        show_upload_modal_set(false);
+        show_set(false);
+        println!("hidden?")
     };
-    view! { cx,
-        <Show when=move || { show_upload_modal() } fallback=|_| { () }>
+    leptos::view! {
+        <Show when=move || { show() } fallback=|| { () }>
             <div
                 class="modal bottom-sheet"
                 style="z-index: 1003; display: block; opacity: 1; bottom: 0%"
@@ -61,9 +58,10 @@ pub fn FitUploadForm(
                     action="/api/upload_fit_file"
                     method="POST"
                     enctype="multipart/form-data".to_string()
+                    on:submit=on_submit
                 >
-                    <div class="modal-content">
-                        // on:submit=on_submit
+                    <div
+                        class="modal-content">
                         <h4 class="black-text">"Upload Fit File"</h4>
                         <div class="row">
                             <input type="file" name="fit_file" multiple/>
