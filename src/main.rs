@@ -1,4 +1,10 @@
 mod fit_upload;
+
+#[cfg(feature = "ssr")]
+use sqlx::postgres::{PgPoolOptions, Pool, PgPool};
+#[cfg(feature = "ssr")]
+static CONNECTION_POOL: OnceCell<Pool<PgPool> = OnceCell::new();
+
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
@@ -7,7 +13,15 @@ async fn main() {
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use toedirs::app::*;
+    use toedirs::config::Config;
     use toedirs::fileserv::file_and_error_handler;
+    use once_cell::sync::OnceCell;
+    
+
+    Config::load();
+    
+    let pool = PgPoolOptions::new().max_connections(50).connect(format!("postgresql://{credentials}{host}/{database}", ))
+    CONNECTION_POOL.set()
 
     simple_logger::init_with_level(log::Level::Info).expect("couldn't initialize logging");
 
@@ -15,7 +29,7 @@ async fn main() {
     // For deployment these variables are:
     // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
     // Alternately a file can be specified such as Some("Cargo.toml")
-    // The file would need to be included with the executable when moved to deployment
+    // The file would need to be included with the executable when moved t:wao deployment
     let conf = get_configuration(None).await.unwrap();
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
@@ -36,6 +50,12 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+}
+
+impl Pool<PgPool> { 
+    pub fn global() -> &'static Pool<PgPool> {
+        CONNECTION_POOL.get().expect("connection pool not initialized")
+    }
 }
 
 #[cfg(not(feature = "ssr"))]

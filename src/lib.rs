@@ -1,5 +1,6 @@
 use cfg_if::cfg_if;
 pub mod app;
+pub mod config;
 pub mod error_template;
 pub mod fileserv;
 mod fit_upload;
