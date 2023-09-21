@@ -30,9 +30,9 @@ fitparser = "0.6.0"
 anyhow = "1"
 bytes = "1"
 futures-util = {version = "0.3.28", optional = true}
-sqlx = "0.7.1"
-figment = {version = "0.10.10", features=["env", "toml"]}
-once_cell = "1.18.0"
+sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "time"], optional = true }
+figment = {version = "0.10.10", features=["env", "toml"], optional = true}
+once_cell = { version="1.18.0", optional = true }
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
@@ -46,7 +46,10 @@ ssr = [
   "leptos_meta/ssr",
   "leptos_router/ssr",
   "dep:tracing",
-  "dep:futures-util"
+  "dep:futures-util",
+  "dep:sqlx",
+  "dep:once_cell",
+  "dep:figment"
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
