@@ -7,22 +7,23 @@ use leptos_router::*;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")]{
-use axum::extract::Multipart;
-pub async fn upload_fit_file(mut multipart: Multipart) -> axum::http::StatusCode {
-    while let Some(field) = multipart.next_field().await.unwrap() {
-        let data = field.bytes().await.unwrap();
-        let _ = process_fit_file(data);
-    }
-    axum::http::StatusCode::ACCEPTED
-}
+        use axum::extract::Multipart;
+        pub async fn upload_fit_file(mut multipart: Multipart) -> axum::http::StatusCode {
+            while let Some(field) = multipart.next_field().await.unwrap() {
+                let data = field.bytes().await.unwrap();
+                let _ = process_fit_file(data);
+            }
+            axum::http::StatusCode::ACCEPTED
+        }
 
-fn process_fit_file(data: Bytes) -> Result<()> {
-    for data in fitparser::from_bytes(&data).context("Failed to read fit file")? {
-        log!("{:?}", data);
+        fn process_fit_file(data: Bytes) -> Result<()> {
+            for data in fitparser::from_bytes(&data).context("Failed to read fit file")? {
+                log!("{:?}", data);
+            }
+            Ok(())
+        }
     }
-    Ok(())
 }
-}}
 
 #[component]
 pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> impl IntoView {

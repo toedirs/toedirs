@@ -1,10 +1,27 @@
 use crate::{
+    auth::*,
     error_template::{AppError, ErrorTemplate},
     fit_upload::FitUploadForm,
 };
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+
+cfg_if::cfg_if! {
+if #[cfg(feature = "ssr")] {
+        use sqlx::PgPool;
+
+        pub fn pool() -> Result<PgPool, ServerFnError> {
+           use_context::<PgPool>()
+                .ok_or_else(|| ServerFnError::ServerError("Pool missing.".into()))
+        }
+
+        pub fn auth() -> Result<AuthSession, ServerFnError> {
+            use_context::<AuthSession>()
+                .ok_or_else(|| ServerFnError::ServerError("Auth session missing.".into()))
+        }
+    }
+}
 
 #[component]
 pub fn App() -> impl IntoView {
