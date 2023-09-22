@@ -10,7 +10,7 @@ cfg_if::cfg_if! {
         use toedirs::config::Config;
         use toedirs::fileserv::file_and_error_handler;
         use once_cell::sync::OnceCell;
-        use sqlx::{Pool, Postgres,{postgres::{PgPoolOptions, PgPool}}};
+        use sqlx::{Pool, Postgres,{postgres::{PgPoolOptions}}};
 
         static CONNECTION_POOL: OnceCell<ConnectionPool> = OnceCell::new();
         #[derive(Debug)]

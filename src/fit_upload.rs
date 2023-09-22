@@ -1,32 +1,13 @@
 use anyhow::{Context, Result};
-#[cfg(feature = "ssr")]
-use axum::extract::Multipart;
 use bytes::Bytes;
-#[cfg(feature = "ssr")]
-use futures_util::stream::StreamExt;
+use leptos::ev::SubmitEvent;
 use leptos::logging::log;
-use leptos::{ev::SubmitEvent, *};
+use leptos::*;
 use leptos_router::*;
 
-// #[server(FitUpload, "/api")]
-// pub async fn upload_fit_file() -> Result<String, ServerFnError> {
-//     use axum::{
-//         extract::{Field, Multipart},
-//         http::Method,
-//     };
-//     use leptos_axum::extract;
-
-//     extract(|method: Method, multipart: Multipart| async move {
-//         while let Some(mut field) = multipart.next_field().await.unwrap() {
-//             let name = field.name().unwrap().to_string();
-//             process_fit_file(field.bytes().await.unwrap());
-//         }
-//     })
-//     .await
-//     .map_err(|e| ServerFnError::ServerError("Couldn't extract multipart".to_string()));
-// }
-
-#[cfg(feature = "ssr")]
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")]{
+use axum::extract::Multipart;
 pub async fn upload_fit_file(mut multipart: Multipart) -> axum::http::StatusCode {
     while let Some(field) = multipart.next_field().await.unwrap() {
         let data = field.bytes().await.unwrap();
@@ -41,10 +22,11 @@ fn process_fit_file(data: Bytes) -> Result<()> {
     }
     Ok(())
 }
+}}
 
 #[component]
 pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> impl IntoView {
-    let on_submit = move |ev: SubmitEvent| {
+    let on_submit = move |_ev: SubmitEvent| {
         show_set(false);
         println!("hidden?")
     };
