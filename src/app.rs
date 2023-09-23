@@ -3,6 +3,7 @@ use crate::{
     error_template::{AppError, ErrorTemplate},
     fit_upload::FitUploadForm,
 };
+use leptos::logging::log;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
@@ -26,9 +27,37 @@ if #[cfg(feature = "ssr")] {
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
-    provide_meta_context();
     let (show_upload, set_show_upload) = create_signal(false);
-    leptos::view! {
+    let (login_status, set_login_status) = create_signal(false);
+
+    let login = create_server_action::<Login>();
+    let logout = create_server_action::<Logout>();
+    let signup = create_server_action::<Signup>();
+
+    let user = create_blocking_resource(
+        move || {
+            (
+                login.version().get(),
+                signup.version().get(),
+                logout.version().get(),
+            )
+        },
+        move |_| async move {
+            let user = get_user().await;
+            {
+                let x = if let Ok(ref x) = user {
+                    x.is_some()
+                } else {
+                    false
+                };
+                log!("login status: {:?}", x);
+                set_login_status(x);
+            }
+            user
+        },
+    );
+    provide_meta_context();
+    view! {
         // injects a stylesheet into the document <head>
         // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/toedirs.css"/>
@@ -69,6 +98,16 @@ pub fn App() -> impl IntoView {
                                 <i class="material-symbols-rounded right">upload</i>
                             </a>
                         </li>
+                        <Transition fallback=move || view! {<span>Loading...</span>}>
+                        {move || {
+                            user.get().map(|user| match user {
+                                Ok(Some(_)) => view! {
+                                    <Logout action=logout/>
+                                }.into_view(),
+                                _ => view! {}.into_view()
+                            })
+                        }}
+                        </Transition>
                     </ul>
                     <FitUploadForm
                         show=show_upload
@@ -79,7 +118,9 @@ pub fn App() -> impl IntoView {
             <main>
                 <div class="container">
                     <Routes>
-                        <Route path="" view=|| view! { <Overview/> }/>
+                        <ProtectedRoute path="/" redirect_path="/login" condition=login_status view=|| view! { <Overview/> } ssr=SsrMode::PartiallyBlocked/>
+                        <Route path="/login" view=move|| view! { <Login action=login/>}/>
+                        <Route path="/signup" view=move|| view! { <Signup action=signup/>}/>
                     </Routes>
                 </div>
             </main>
@@ -102,5 +143,76 @@ fn Overview() -> impl IntoView {
                 <div class="card-panel teal">Fitness & Fatigue</div>
             </div>
         </div>
+    }
+}
+
+#[component]
+fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
+    view! {
+        <ActionForm action=action>
+            <h1>"Log In"</h1>
+            <label>
+                "User ID:"
+                <input type="text" placeholder="User ID" maxlength="32" name="username" class="auth-input" />
+            </label>
+            <br/>
+            <label>
+                "Password:"
+                <input type="password" placeholder="Password" name="password" class="auth-input" />
+            </label>
+            <br/>
+            <label>
+                <input type="checkbox" name="remember" class="auth-input" />
+                "Remember me?"
+            </label>
+            <br/>
+            <button type="submit" class="button">"Log In"</button>
+            <A href="/signup">Signup</A>
+        </ActionForm>
+    }
+}
+
+#[component]
+fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
+    view! {
+
+        <div id="loginbox">
+            <ActionForm action=action>
+                <button type="submit" class="button">"Log Out"</button>
+            </ActionForm>
+        </div>
+    }
+}
+
+#[component]
+fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
+    view! {
+
+        <ActionForm action=action>
+            <h1>"Sign Up"</h1>
+            <label>
+                "User ID:"
+                <input type="text" placeholder="User ID" maxlength="32" name="username" class="auth-input" />
+            </label>
+            <br/>
+            <label>
+                "Password:"
+                <input type="password" placeholder="Password" name="password" class="auth-input" />
+            </label>
+            <br/>
+            <label>
+                "Confirm Password:"
+                <input type="password" placeholder="Password again" name="password_confirmation" class="auth-input" />
+            </label>
+            <br/>
+            <label>
+                "Remember me?"
+            </label>
+            <input type="checkbox" name="remember" class="auth-input" />
+
+            <br/>
+            <button type="submit" class="button">"Sign Up"</button>
+        </ActionForm>
+            <A href="/login">Login</A>
     }
 }

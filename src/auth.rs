@@ -39,7 +39,7 @@ if #[cfg(feature = "ssr")] {
 
     impl User {
         pub async fn get(id: i64, pool: &PgPool) -> Option<Self> {
-            let sqluser = sqlx::query_as::<_, SqlUser>("SELECT * FROM users WHERE id = ?")
+            let sqluser = sqlx::query_as::<_, SqlUser>("SELECT * FROM users WHERE id = $1")
                 .bind(id)
                 .fetch_one(pool)
                 .await
@@ -47,7 +47,7 @@ if #[cfg(feature = "ssr")] {
 
             //lets just get all the tokens the user can use, we will only use the full permissions if modifing them.
             let sql_user_perms = sqlx::query_as::<_, SqlPermissionTokens>(
-                "SELECT token FROM user_permissions WHERE user_id = ?;",
+                "SELECT token FROM user_permissions WHERE user_id = $1;",
             )
             .bind(id)
             .fetch_all(pool)
@@ -58,7 +58,7 @@ if #[cfg(feature = "ssr")] {
         }
 
         pub async fn get_from_username(name: String, pool: &PgPool) -> Option<Self> {
-            let sqluser = sqlx::query_as::<_, SqlUser>("SELECT * FROM users WHERE username = ?")
+            let sqluser = sqlx::query_as::<_, SqlUser>("SELECT * FROM users WHERE username = $1")
                 .bind(name)
                 .fetch_one(pool)
                 .await
@@ -66,7 +66,7 @@ if #[cfg(feature = "ssr")] {
 
             //lets just get all the tokens the user can use, we will only use the full permissions if modifing them.
             let sql_user_perms = sqlx::query_as::<_, SqlPermissionTokens>(
-                "SELECT token FROM user_permissions WHERE user_id = ?;",
+                "SELECT token FROM user_permissions WHERE user_id = $1;",
             )
             .bind(sqluser.id)
             .fetch_all(pool)
@@ -190,7 +190,7 @@ pub async fn signup(
 
     let password_hashed = hash(password, DEFAULT_COST).unwrap();
 
-    sqlx::query("INSERT INTO users (username, password) VALUES (?,?)")
+    sqlx::query("INSERT INTO users (username, password) VALUES ($1,$2)")
         .bind(username.clone())
         .bind(password_hashed)
         .execute(&pool)

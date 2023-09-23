@@ -11,8 +11,7 @@ cfg_if! {
         use toedirs::state::AppState;
         use toedirs::config::Config;
         use toedirs::fileserv::file_and_error_handler;
-        use once_cell::sync::OnceCell;
-        use sqlx::{Pool, PgPool, Postgres, migrate, {postgres::{PgPoolOptions}}};
+        use sqlx::{PgPool, migrate, {postgres::{PgPoolOptions}}};
 
         use axum_session::{SessionConfig, SessionLayer, SessionStore};
         use axum_session_auth::{AuthSessionLayer, AuthConfig, SessionPgPool};

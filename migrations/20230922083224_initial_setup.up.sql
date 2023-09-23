@@ -2,7 +2,7 @@
 
 
 CREATE TABLE IF NOT EXISTS users (
-  id         SERIAL NOT NULL PRIMARY KEY,
+  id         BIGSERIAL NOT NULL PRIMARY KEY,
   username   TEXT NOT NULL UNIQUE,
   password   TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS user_permissions (
 );
 
 CREATE TABLE IF NOT EXISTS activities  (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     user_id integer NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     start_time timestamp with time zone NOT NULL,
     end_time timestamp with time zone NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS activities  (
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     activity_id integer NOT NULL REFERENCES activities (id) ON DELETE CASCADE,
     start_time timestamp with time zone NOT NULL,
     end_time timestamp with time zone NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE TABLE IF NOT EXISTS laps (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     activity_id integer NOT NULL REFERENCES activities (id) ON DELETE CASCADE,
     start_time timestamp with time zone NOT NULL,
     end_time timestamp with time zone NOT NULL,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS laps (
 
 
 CREATE TABLE IF NOT EXISTS records (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     activity_id integer NOT NULL REFERENCES activities (id) ON DELETE CASCADE,
     session_id integer REFERENCES sessions (id),
     lap_id integer  REFERENCES laps (id),
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS records (
 
 
  CREATE TABLE IF NOT EXISTS events (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     activity_id integer NOT NULL REFERENCES activities (id) ON DELETE CASCADE,
     session_id integer REFERENCES sessions (id),
     lap_id integer REFERENCES laps (id),
