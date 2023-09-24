@@ -67,32 +67,46 @@ pub fn App() -> impl IntoView {
                     <ul id="nav-mobile" class="right hide-on-med-and-down">
                         <ProtectedContentWrapper
                             when=logged_in
-                            fallback=move || view! { <li><A href="/login">Login</A></li><li><A href="/signup">Signup</A></li> }
+                            fallback=move || {
+                                view! {
+                                    <li>
+                                        <A href="/login">Login</A>
+                                    </li>
+                                    <li>
+                                        <A href="/signup">Signup</A>
+                                    </li>
+                                }
+                            }
                         >
-                        <li>
 
-                            <A href="/" class="">
-                                Overview
-                            </A>
-                        </li>
-                        <li>
+                            <li>
 
-                            <A href="/activities" class="">
-                                Activities
-                            </A>
-                        </li>
-                        <li>
-                            <a
-                                class="waves-effect waves-light btn"
-                                on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
-                            >
-                                Upload
-                                <i class="material-symbols-rounded right">upload</i>
-                            </a>
-                        </li>
-                        <li>
-                            <A href="/logout">Logout</A>
-                        </li>
+                                <A href="/" class="">
+                                    Overview
+                                </A>
+                            </li>
+                            <li>
+
+                                <A href="/activities" class="">
+                                    Activities
+                                </A>
+                            </li>
+                            <li>
+                                <a
+                                    class="waves-effect waves-light btn"
+                                    on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
+                                >
+                                    Upload
+                                    <i class="material-symbols-rounded right">upload</i>
+                                </a>
+                            </li>
+                            <li>
+                                <ActionForm action=logout>
+                                    <button type="submit" class="btn-flat waves-effect">
+                                        "Log Out"
+                                    </button>
+                                </ActionForm>
+                            </li>
                         </ProtectedContentWrapper>
                     </ul>
                     <FitUploadForm show=show_upload show_set=set_show_upload/>
@@ -107,15 +121,15 @@ pub fn App() -> impl IntoView {
                                 view! {
                                     <ProtectedContentWrapper
                                         when=logged_in
-                                        fallback=move || view! { <div>"Not logged in"</div> }
+                                        fallback=move || view! { <Home/> }
                                     >
                                         <Overview/>
                                     </ProtectedContentWrapper>
                                 }
                             }
                         />
+
                         <Route path="/login" view=move || view! { <Login action=login/> }/>
-                        <Route path="/logout" view=move || view! { <Logout action=logout/> }/>
                         <Route path="/signup" view=move || view! { <Signup action=signup/> }/>
                     </Routes>
                 </div>
@@ -146,46 +160,48 @@ fn Overview() -> impl IntoView {
 fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
     view! {
         <ActionForm action=action>
-            <h1>"Log In"</h1>
-            <label>
-                "User ID:"
-                <input
-                    type="text"
-                    placeholder="User ID"
-                    maxlength="32"
-                    name="username"
-                    class="auth-input"
-                />
-            </label>
-            <br/>
-            <label>
-                "Password:"
-                <input type="password" placeholder="Password" name="password" class="auth-input"/>
-            </label>
-            <br/>
-            <label>
-                <input type="checkbox" name="remember" class="auth-input"/>
-                "Remember me?"
-            </label>
-            <br/>
-            <button type="submit" class="button">
-                "Log In"
-            </button>
-            <A href="/signup">Signup</A>
+            <div class="row">
+                <div class="col s12">
+                    <h1>"Log In"</h1>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12">
+                    <input
+                        type="text"
+                        placeholder="User ID"
+                        maxlength="32"
+                        name="username"
+                        id="username"
+                    />
+                    <label for="username">"User ID:"</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12">
+                    <input type="password" placeholder="Password" name="password"/>
+                    <label for="password">"Password:"</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <label>
+                        <input type="checkbox" name="remember"/>
+                        <span>"Remember me?"</span>
+                    </label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <button type="submit" class="btn waves-effect waves-light">
+                        "Log In"
+                    </button>
+                    <A href="/signup" class="waves-effect waves-light grey-darken-2 btn">
+                        Signup
+                    </A>
+                </div>
+            </div>
         </ActionForm>
-    }
-}
-
-#[component]
-fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
-    view! {
-        <div id="loginbox">
-            <ActionForm action=action>
-                <button type="submit" class="button">
-                    "Log Out"
-                </button>
-            </ActionForm>
-        </div>
     }
 }
 
@@ -193,42 +209,103 @@ fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
 fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
     view! {
         <ActionForm action=action>
-            <h1>"Sign Up"</h1>
-            <label>
-                "User ID:"
-                <input
-                    type="text"
-                    placeholder="User ID"
-                    maxlength="32"
-                    name="username"
-                    class="auth-input"
-                />
-            </label>
-            <br/>
-            <label>
-                "Password:"
-                <input type="password" placeholder="Password" name="password" class="auth-input"/>
-            </label>
-            <br/>
-            <label>
-                "Confirm Password:"
-                <input
-                    type="password"
-                    placeholder="Password again"
-                    name="password_confirmation"
-                    class="auth-input"
-                />
-            </label>
-            <br/>
-            <label>"Remember me?"</label>
-            <input type="checkbox" name="remember" class="auth-input"/>
+            <div class="row">
+                <div class="col s12">
+                    <h1>"Sign Up"</h1>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12">
+                    <input
+                        type="text"
+                        placeholder="User ID"
+                        maxlength="32"
+                        name="username"
+                        id="username"
+                    />
+                    <label for="username">"User ID:"</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12">
+                    <input type="password" placeholder="Password" name="password" id="password"/>
+                    <label for="password">"Password:"</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12">
+                    <input
+                        type="password"
+                        placeholder="Password again"
+                        name="password_confirmation"
+                        id="password_confirmation"
+                    />
+                    <label for="password_confirmation">"Confirm Password:"</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <label>
+                        <input type="checkbox" name="remember"/>
+                        <span>"Remember me?"</span>
+                    </label>
+                </div>
+            </div>
 
-            <br/>
-            <button type="submit" class="button">
-                "Sign Up"
-            </button>
+            <div class="row">
+                <div class="col s12">
+                    <button type="submit" class="btn waves-effect waves-light">
+                        "Sign Up"
+                    </button>
+                    <A href="/login" class="btn waves-effect waves-light grey-darken-2">
+                        Login
+                    </A>
+                </div>
+            </div>
         </ActionForm>
-        <A href="/login">Login</A>
+    }
+}
+
+#[component]
+pub fn Home() -> impl IntoView {
+    view! {
+        <div class="row">
+            <div class="col s12">
+                <h1>Welcome to Toedi</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s4">
+                <div class="card m-1 small">
+                    <div class="card-content">
+                        <span class="card-title">Track your Training</span>
+                        <p>
+                            Always stay on top of your training effort with easy to read charts and metrics
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col s4">
+
+                <div class="card m-1 small">
+                    <div class="card-content">
+                        <span class="card-title">Based on Science</span>
+                        <p>
+                            "Based on newest scientific research, presented in a transparent way. We don't just make up numbers and we explain exactly how our metrics are calculated"
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col s4">
+
+                <div class="card m-1 small">
+                    <div class="card-content">
+                        <span class="card-title">Open Source</span>
+                        <p>Fully Open-Source code, made by users for users</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 }
 
