@@ -65,6 +65,10 @@ pub fn App() -> impl IntoView {
                         Toedi
                     </a>
                     <ul id="nav-mobile" class="right hide-on-med-and-down">
+                        <ProtectedContentWrapper
+                            when=logged_in
+                            fallback=move || view! { <li><A href="/login">Login</A></li><li><A href="/signup">Signup</A></li> }
+                        >
                         <li>
 
                             <A href="/" class="">
@@ -86,11 +90,9 @@ pub fn App() -> impl IntoView {
                                 <i class="material-symbols-rounded right">upload</i>
                             </a>
                         </li>
-                        <ProtectedContentWrapper
-                            when=logged_in
-                            fallback=move || view! { <A href="/login">Login</A> }
-                        >
+                        <li>
                             <A href="/logout">Logout</A>
+                        </li>
                         </ProtectedContentWrapper>
                     </ul>
                     <FitUploadForm show=show_upload show_set=set_show_upload/>
