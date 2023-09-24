@@ -28,38 +28,26 @@ if #[cfg(feature = "ssr")] {
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     let (show_upload, set_show_upload) = create_signal(false);
-    let (login_status, set_login_status) = create_signal(false);
-
+    let (logged_in, set_logged_in) = create_signal(false);
     let login = create_server_action::<Login>();
     let logout = create_server_action::<Logout>();
     let signup = create_server_action::<Signup>();
-
-    let user = create_blocking_resource(
+    let user = create_resource(
         move || {
             (
                 login.version().get(),
-                signup.version().get(),
                 logout.version().get(),
+                signup.version().get(),
             )
         },
         move |_| async move {
-            let user = get_user().await;
-            {
-                let x = if let Ok(ref x) = user {
-                    x.is_some()
-                } else {
-                    false
-                };
-                log!("login status: {:?}", x);
-                set_login_status(x);
-            }
+            let user = get_user().await.unwrap_or(None);
+            set_logged_in(user.is_some());
             user
         },
     );
     provide_meta_context();
     view! {
-        // injects a stylesheet into the document <head>
-        // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/toedirs.css"/>
 
         // sets the document title
@@ -98,29 +86,35 @@ pub fn App() -> impl IntoView {
                                 <i class="material-symbols-rounded right">upload</i>
                             </a>
                         </li>
-                        <Transition fallback=move || view! {<span>Loading...</span>}>
-                        {move || {
-                            user.get().map(|user| match user {
-                                Ok(Some(_)) => view! {
-                                    <Logout action=logout/>
-                                }.into_view(),
-                                _ => view! {}.into_view()
-                            })
-                        }}
-                        </Transition>
+                        <ProtectedContentWrapper
+                            when=logged_in
+                            fallback=move || view! { <A href="/login">Login</A> }
+                        >
+                            <A href="/logout">Logout</A>
+                        </ProtectedContentWrapper>
                     </ul>
-                    <FitUploadForm
-                        show=show_upload
-                        show_set=set_show_upload
-                    />
+                    <FitUploadForm show=show_upload show_set=set_show_upload/>
                 </div>
             </nav>
             <main>
                 <div class="container">
                     <Routes>
-                        <ProtectedRoute path="/" redirect_path="/login" condition=login_status view=|| view! { <Overview/> } ssr=SsrMode::PartiallyBlocked/>
-                        <Route path="/login" view=move|| view! { <Login action=login/>}/>
-                        <Route path="/signup" view=move|| view! { <Signup action=signup/>}/>
+                        <Route
+                            path="/"
+                            view=move || {
+                                view! {
+                                    <ProtectedContentWrapper
+                                        when=logged_in
+                                        fallback=move || view! { <div>"Not logged in"</div> }
+                                    >
+                                        <Overview/>
+                                    </ProtectedContentWrapper>
+                                }
+                            }
+                        />
+                        <Route path="/login" view=move || view! { <Login action=login/> }/>
+                        <Route path="/logout" view=move || view! { <Logout action=logout/> }/>
+                        <Route path="/signup" view=move || view! { <Signup action=signup/> }/>
                     </Routes>
                 </div>
             </main>
@@ -153,20 +147,28 @@ fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
             <h1>"Log In"</h1>
             <label>
                 "User ID:"
-                <input type="text" placeholder="User ID" maxlength="32" name="username" class="auth-input" />
+                <input
+                    type="text"
+                    placeholder="User ID"
+                    maxlength="32"
+                    name="username"
+                    class="auth-input"
+                />
             </label>
             <br/>
             <label>
                 "Password:"
-                <input type="password" placeholder="Password" name="password" class="auth-input" />
+                <input type="password" placeholder="Password" name="password" class="auth-input"/>
             </label>
             <br/>
             <label>
-                <input type="checkbox" name="remember" class="auth-input" />
+                <input type="checkbox" name="remember" class="auth-input"/>
                 "Remember me?"
             </label>
             <br/>
-            <button type="submit" class="button">"Log In"</button>
+            <button type="submit" class="button">
+                "Log In"
+            </button>
             <A href="/signup">Signup</A>
         </ActionForm>
     }
@@ -175,10 +177,11 @@ fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
 #[component]
 fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
     view! {
-
         <div id="loginbox">
             <ActionForm action=action>
-                <button type="submit" class="button">"Log Out"</button>
+                <button type="submit" class="button">
+                    "Log Out"
+                </button>
             </ActionForm>
         </div>
     }
@@ -187,32 +190,64 @@ fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
 #[component]
 fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
     view! {
-
         <ActionForm action=action>
             <h1>"Sign Up"</h1>
             <label>
                 "User ID:"
-                <input type="text" placeholder="User ID" maxlength="32" name="username" class="auth-input" />
+                <input
+                    type="text"
+                    placeholder="User ID"
+                    maxlength="32"
+                    name="username"
+                    class="auth-input"
+                />
             </label>
             <br/>
             <label>
                 "Password:"
-                <input type="password" placeholder="Password" name="password" class="auth-input" />
+                <input type="password" placeholder="Password" name="password" class="auth-input"/>
             </label>
             <br/>
             <label>
                 "Confirm Password:"
-                <input type="password" placeholder="Password again" name="password_confirmation" class="auth-input" />
+                <input
+                    type="password"
+                    placeholder="Password again"
+                    name="password_confirmation"
+                    class="auth-input"
+                />
             </label>
             <br/>
-            <label>
-                "Remember me?"
-            </label>
-            <input type="checkbox" name="remember" class="auth-input" />
+            <label>"Remember me?"</label>
+            <input type="checkbox" name="remember" class="auth-input"/>
 
             <br/>
-            <button type="submit" class="button">"Sign Up"</button>
+            <button type="submit" class="button">
+                "Sign Up"
+            </button>
         </ActionForm>
-            <A href="/login">Login</A>
+        <A href="/login">Login</A>
+    }
+}
+
+#[component]
+pub fn ProtectedContentWrapper<F, IV>(
+    fallback: F,
+    children: ChildrenFn,
+    when: ReadSignal<bool>,
+) -> impl IntoView
+where
+    F: Fn() -> IV + 'static,
+    IV: IntoView,
+{
+    let fallback = store_value(fallback);
+    let children = store_value(children);
+
+    view! {
+        <Suspense fallback=|| ()>
+            <Show when=move || when() fallback=move || fallback.with_value(|fallback| fallback())>
+                {children.with_value(|children| children())}
+            </Show>
+        </Suspense>
     }
 }
