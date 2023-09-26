@@ -1,7 +1,12 @@
 use anyhow::{Context, Result};
+use chrono::{DateTime, Local};
 use leptos::ev::SubmitEvent;
 use leptos::*;
 use leptos_router::*;
+
+struct Record {
+    timestamp: DateTime<Local>,
+}
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")]{
@@ -17,8 +22,17 @@ cfg_if::cfg_if! {
         }
 
         fn process_fit_file(data: Bytes) -> Result<()> {
+            let records: Vec<Record> = Vec::new();
             for data in fitparser::from_bytes(&data).context("Failed to read fit file")? {
-                log!("{:?}", data);
+                match data.kind() {
+                    fitparser::profile::MesgNum::Record => {records.push(Record{timestamp: data.fields().iter().filter(|f|f.name() == "timestamp").collect::<Vec<&fitparser::FitDataField>>().first().unwrap().value()})},
+                    fitparser::profile::MesgNum::Event => {},
+                    fitparser::profile::MesgNum::Session => {},
+                    fitparser::profile::MesgNum::Lap => {},
+                    fitparser::profile::MesgNum::Activity => {},
+                    fitparser::profile::MesgNum::DeviceInfo => {},
+                    _ => {leptos::logging::log!("Unknown: {:?}", data.kind())}
+                }
             }
             Ok(())
         }
