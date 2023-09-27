@@ -5,16 +5,25 @@ use leptos::*;
 use leptos_router::*;
 
 #[derive(Debug, Clone)]
+struct Coordinates {
+    latitude: i32,
+    longitude: i32,
+}
+
+#[derive(Debug, Clone)]
 struct Record {
     timestamp: DateTime<Local>,
     heartrate: Option<u8>,
+    coordinates: Option<Coordinates>,
+    distance: Option<f64>,
+    speed: Option<f64>,
+    altitude: Option<f64>,
 }
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")]{
         use axum::extract::Multipart;
         use bytes::Bytes;
-        use leptos::logging::log;
         use fitparser::{FitDataRecord, Value, profile::MesgNum};
 
         impl TryFrom<FitDataRecord> for Record {
@@ -34,7 +43,22 @@ cfg_if::cfg_if! {
 
                 let heartrate = fields.iter().find(|&f| f.name() == "heart_rate");
                 let heartrate = heartrate.map(|hr| hr.clone().into_value()).and_then(|hr| match hr {Value::UInt8(hr)=> Some(hr), _ => None});
-                Ok(Record {timestamp, heartrate})
+
+
+                let latitude = fields.iter().find(|&f| f.name() == "position_lat");
+                let longitude = fields.iter().find(|&f| f.name() == "position_long");
+                let coordinates = latitude.zip(longitude).map(|(lat, long)| (lat.clone().into_value(), long.clone().into_value())).and_then(|(lat, long)| match (lat,long) { (Value::SInt32(lat), Value::SInt32(long)) => Some(Coordinates {latitude: lat, longitude: long}), _ => None});
+
+                let altitude = fields.iter().find(|&f|f.name() == "enhanced_altitude" || f.name() == "altitude");
+                let altitude = altitude.map(|a| a.clone().into_value()).and_then(|a| match a { Value::Float64(a) => Some(a), _ => None});
+
+                let distance = fields.iter().find(|&f|f.name() == "enhanced_distance" || f.name() == "distance");
+                let distance = distance.map(|d| d.clone().into_value()).and_then(|d| match d { Value::Float64(d) => Some(d), _ => None});
+
+                let speed = fields.iter().find(|&f|f.name() == "enhanced_speed" || f.name() == "speed");
+                let speed = speed.map(|s| s.clone().into_value()).and_then(|s| match s { Value::Float64(s) => Some(s), _ => None});
+
+                Ok(Record {timestamp, heartrate, coordinates, altitude, distance, speed})
             }
         }
 
@@ -50,7 +74,9 @@ cfg_if::cfg_if! {
             let mut records: Vec<Record> = Vec::new();
             for data in fitparser::from_bytes(&data).context("Failed to read fit file")? {
                 match data.kind() {
-                    fitparser::profile::MesgNum::Record => {Record::try_from(data).map(|record| records.push(record));},
+                    fitparser::profile::MesgNum::Record => {
+                        Record::try_from(data).map(|record| records.push(record));
+                    },
                     fitparser::profile::MesgNum::Event => {leptos::logging::log!("Event: {:?}", data);},
                     fitparser::profile::MesgNum::Session => {leptos::logging::log!("Session: {:?}", data);},
                     fitparser::profile::MesgNum::Lap => {leptos::logging::log!("Lap: {:?}", data);},
