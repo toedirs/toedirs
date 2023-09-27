@@ -7,6 +7,7 @@ use leptos_router::*;
 #[derive(Debug, Clone)]
 struct Record {
     timestamp: DateTime<Local>,
+    heartrate: Option<u8>,
 }
 
 cfg_if::cfg_if! {
@@ -30,7 +31,10 @@ cfg_if::cfg_if! {
                     Value::Timestamp(date) => date,
                     _ => return Err("timestamp field is not a date")
                 };
-                Ok(Record {timestamp})
+
+                let heartrate = fields.iter().find(|&f| f.name() == "heart_rate");
+                let heartrate = heartrate.map(|hr| hr.clone().into_value()).and_then(|hr| match hr {Value::UInt8(hr)=> Some(hr), _ => None});
+                Ok(Record {timestamp, heartrate})
             }
         }
 
@@ -55,6 +59,7 @@ cfg_if::cfg_if! {
                     _ => {leptos::logging::log!("Unknown: {:?}", data.kind())}
                 }
             }
+            leptos::logging::log!("Parsed records: {:?}", records);
             Ok(())
         }
     }
