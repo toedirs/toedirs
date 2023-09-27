@@ -4,6 +4,7 @@ use leptos::ev::SubmitEvent;
 use leptos::*;
 use leptos_router::*;
 
+#[derive(Debug, Clone)]
 struct Record {
     timestamp: DateTime<Local>,
 }
@@ -13,6 +14,26 @@ cfg_if::cfg_if! {
         use axum::extract::Multipart;
         use bytes::Bytes;
         use leptos::logging::log;
+        use fitparser::{FitDataRecord, Value, profile::MesgNum};
+
+        impl TryFrom<FitDataRecord> for Record {
+            type Error = &'static str;
+
+            fn try_from(value: FitDataRecord)-> Result<Self, Self::Error> {
+                match value.kind() {
+                    MesgNum::Record => {},
+                    _ => return Err("Not a Record")
+                };
+                let fields = value.fields();
+                let timestamp = fields.iter().find(|&f| f.name() == "timestamp").ok_or("no timestamp in record")?;
+                let timestamp = match timestamp.clone().into_value() {
+                    Value::Timestamp(date) => date,
+                    _ => return Err("timestamp field is not a date")
+                };
+                Ok(Record {timestamp})
+            }
+        }
+
         pub async fn upload_fit_file(mut multipart: Multipart) -> axum::http::StatusCode {
             while let Some(field) = multipart.next_field().await.unwrap() {
                 let data = field.bytes().await.unwrap();
@@ -22,15 +43,15 @@ cfg_if::cfg_if! {
         }
 
         fn process_fit_file(data: Bytes) -> Result<()> {
-            let records: Vec<Record> = Vec::new();
+            let mut records: Vec<Record> = Vec::new();
             for data in fitparser::from_bytes(&data).context("Failed to read fit file")? {
                 match data.kind() {
-                    fitparser::profile::MesgNum::Record => {records.push(Record{timestamp: data.fields().iter().filter(|f|f.name() == "timestamp").collect::<Vec<&fitparser::FitDataField>>().first().unwrap().value()})},
-                    fitparser::profile::MesgNum::Event => {},
-                    fitparser::profile::MesgNum::Session => {},
-                    fitparser::profile::MesgNum::Lap => {},
-                    fitparser::profile::MesgNum::Activity => {},
-                    fitparser::profile::MesgNum::DeviceInfo => {},
+                    fitparser::profile::MesgNum::Record => {Record::try_from(data).map(|record| records.push(record));},
+                    fitparser::profile::MesgNum::Event => {leptos::logging::log!("Event: {:?}", data);},
+                    fitparser::profile::MesgNum::Session => {leptos::logging::log!("Session: {:?}", data);},
+                    fitparser::profile::MesgNum::Lap => {leptos::logging::log!("Lap: {:?}", data);},
+                    fitparser::profile::MesgNum::Activity => {leptos::logging::log!("Activity: {:?}", data);},
+                    fitparser::profile::MesgNum::DeviceInfo => {leptos::logging::log!("Device Info: {:?}", data);},
                     _ => {leptos::logging::log!("Unknown: {:?}", data.kind())}
                 }
             }
