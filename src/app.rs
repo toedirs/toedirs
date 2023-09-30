@@ -109,7 +109,6 @@ pub fn App() -> impl IntoView {
                             </li>
                         </ProtectedContentWrapper>
                     </ul>
-                    <FitUploadForm show=show_upload show_set=set_show_upload/>
                 </div>
             </nav>
             <main>
@@ -132,6 +131,7 @@ pub fn App() -> impl IntoView {
                         <Route path="/login" view=move || view! { <Login action=login/> }/>
                         <Route path="/signup" view=move || view! { <Signup action=signup/> }/>
                     </Routes>
+                    <FitUploadForm show=show_upload show_set=set_show_upload/>
                 </div>
             </main>
         </Router>
