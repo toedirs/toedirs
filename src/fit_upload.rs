@@ -5,6 +5,23 @@ use leptos::*;
 use leptos_router::*;
 
 #[derive(Debug, Clone)]
+struct DatabaseEntry<S: DatabaseState, T> {
+    state: Box<T>,
+    extra: S,
+}
+
+#[derive(Debug, Clone)]
+struct New;
+#[derive(Debug, Clone)]
+struct Inserted {
+    activity_id: i64,
+}
+
+trait DatabaseState {}
+impl DatabaseState for New {}
+impl DatabaseState for Inserted {}
+
+#[derive(Debug, Clone)]
 struct Coordinates {
     latitude: i32,
     longitude: i32,
@@ -20,13 +37,22 @@ struct Record {
     altitude: Option<f64>,
 }
 
+#[derive(Debug, Clone)]
+struct Session {}
+
+#[derive(Debug, Clone)]
+struct Lap {}
+
+#[derive(Debug, Clone)]
+struct Activity {}
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")]{
         use axum::extract::Multipart;
         use bytes::Bytes;
         use fitparser::{FitDataRecord, Value, profile::MesgNum};
 
-        impl TryFrom<FitDataRecord> for Record {
+        impl TryFrom<FitDataRecord> for DatabaseEntry<New, Record>{
             type Error = &'static str;
 
             fn try_from(value: FitDataRecord)-> Result<Self, Self::Error> {
@@ -58,7 +84,7 @@ cfg_if::cfg_if! {
                 let speed = fields.iter().find(|&f|f.name() == "enhanced_speed" || f.name() == "speed");
                 let speed = speed.map(|s| s.clone().into_value()).and_then(|s| match s { Value::Float64(s) => Some(s), _ => None});
 
-                Ok(Record {timestamp, heartrate, coordinates, altitude, distance, speed})
+                Ok(DatabaseEntry{state: Box::new(Record {timestamp, heartrate, coordinates, altitude, distance, speed}), extra:New})
             }
         }
 
@@ -71,11 +97,11 @@ cfg_if::cfg_if! {
         }
 
         fn process_fit_file(data: Bytes) -> Result<()> {
-            let mut records: Vec<Record> = Vec::new();
+            let mut records: Vec<DatabaseEntry<New, Record>> = Vec::new();
             for data in fitparser::from_bytes(&data).context("Failed to read fit file")? {
                 match data.kind() {
                     fitparser::profile::MesgNum::Record => {
-                        Record::try_from(data).map(|record| records.push(record));
+                        DatabaseEntry::<New, Record>::try_from(data).map(|record| records.push(record));
                     },
                     fitparser::profile::MesgNum::Event => {leptos::logging::log!("Event: {:?}", data);},
                     fitparser::profile::MesgNum::Session => {leptos::logging::log!("Session: {:?}", data);},

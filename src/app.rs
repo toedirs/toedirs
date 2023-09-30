@@ -42,8 +42,8 @@ pub fn App() -> impl IntoView {
         },
         move |_| async move {
             let user = get_user().await.unwrap_or(None);
-            set_logged_in(user.is_some());
-            user
+            // set_logged_in(user.is_some());
+            user.is_some()
         },
     );
     provide_meta_context();
@@ -66,7 +66,7 @@ pub fn App() -> impl IntoView {
                     </a>
                     <ul id="nav-mobile" class="right hide-on-med-and-down">
                         <ProtectedContentWrapper
-                            when=logged_in
+                            when=user.clone()
                             fallback=move || {
                                 view! {
                                     <li>
@@ -120,7 +120,7 @@ pub fn App() -> impl IntoView {
                             view=move || {
                                 view! {
                                     <ProtectedContentWrapper
-                                        when=logged_in
+                                        when=user.clone()
                                         fallback=move || view! { <Home/> }
                                     >
                                         <Overview/>
@@ -310,21 +310,25 @@ pub fn Home() -> impl IntoView {
 }
 
 #[component]
-pub fn ProtectedContentWrapper<F, IV>(
+pub fn ProtectedContentWrapper<F, IV, T>(
     fallback: F,
     children: ChildrenFn,
-    when: ReadSignal<bool>,
+    when: Resource<T, bool>,
 ) -> impl IntoView
 where
     F: Fn() -> IV + 'static,
     IV: IntoView,
+    T: Clone + 'static,
 {
     let fallback = store_value(fallback);
     let children = store_value(children);
 
     view! {
         <Suspense fallback=|| ()>
-            <Show when=move || when() fallback=move || fallback.with_value(|fallback| fallback())>
+            <Show
+                when=move || when.get().unwrap_or(false)
+                fallback=move || fallback.with_value(|fallback| fallback())
+            >
                 {children.with_value(|children| children())}
             </Show>
         </Suspense>

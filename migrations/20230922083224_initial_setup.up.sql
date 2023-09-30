@@ -56,8 +56,6 @@ CREATE TABLE IF NOT EXISTS laps (
 CREATE TABLE IF NOT EXISTS records (
     id BIGSERIAL PRIMARY KEY,
     activity_id integer NOT NULL REFERENCES activities (id) ON DELETE CASCADE,
-    session_id integer REFERENCES sessions (id),
-    lap_id integer  REFERENCES laps (id),
     date_recorded timestamp with time zone NOT NULL,
     coordinates point,
     distance NUMERIC(9, 2),
@@ -74,8 +72,6 @@ CREATE TABLE IF NOT EXISTS records (
  CREATE TABLE IF NOT EXISTS events (
     id BIGSERIAL PRIMARY KEY,
     activity_id integer NOT NULL REFERENCES activities (id) ON DELETE CASCADE,
-    session_id integer REFERENCES sessions (id),
-    lap_id integer REFERENCES laps (id),
     date_recorded timestamp with time zone NOT NULL,
     event_type varchar(100) NOT NULL
 );
