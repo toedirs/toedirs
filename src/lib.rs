@@ -5,6 +5,7 @@ pub mod config;
 pub mod error_template;
 pub mod fileserv;
 pub mod fit_upload;
+pub mod models;
 pub mod state;
 
 cfg_if! { if #[cfg(feature = "hydrate")] {

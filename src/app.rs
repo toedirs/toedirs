@@ -28,7 +28,6 @@ if #[cfg(feature = "ssr")] {
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     let (show_upload, set_show_upload) = create_signal(false);
-    let (logged_in, set_logged_in) = create_signal(false);
     let login = create_server_action::<Login>();
     let logout = create_server_action::<Logout>();
     let signup = create_server_action::<Signup>();
@@ -42,7 +41,6 @@ pub fn App() -> impl IntoView {
         },
         move |_| async move {
             let user = get_user().await.unwrap_or(None);
-            // set_logged_in(user.is_some());
             user.is_some()
         },
     );

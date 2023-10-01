@@ -1,4 +1,3 @@
-mod fit_upload;
 use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(feature = "ssr")] {
@@ -8,6 +7,7 @@ cfg_if! {
         use leptos_axum::{generate_route_list, LeptosRoutes, handle_server_fns_with_context};
         use toedirs::app::*;
         use toedirs::auth::*;
+        use toedirs::fit_upload::upload_fit_file;
         use toedirs::state::AppState;
         use toedirs::config::Config;
         use toedirs::fileserv::file_and_error_handler;
@@ -68,7 +68,7 @@ cfg_if! {
             // build our application with a route
             let app = Router::new()
                 .route("/api/*fn_name", get(server_fn_handler).post(server_fn_handler))
-                .route("/api/upload_fit_file", post(fit_upload::upload_fit_file))
+                .route("/api/upload_fit_file", post(upload_fit_file))
                 .leptos_routes_with_handler( routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)
                 .layer(AuthSessionLayer::<User, i64, SessionPgPool, PgPool>::new(Some(pool.clone()))
