@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS laps (
 CREATE TABLE IF NOT EXISTS records (
     id BIGSERIAL PRIMARY KEY,
     activity_id integer NOT NULL REFERENCES activities (id) ON DELETE CASCADE,
-    date_recorded timestamp with time zone NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
     coordinates point,
     distance NUMERIC(9, 2),
     altitude NUMERIC(6,1),

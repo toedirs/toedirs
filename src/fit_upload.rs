@@ -16,7 +16,9 @@ use sqlx::{PgExecutor, PgPool};
 
 use super::auth::User;
 #[cfg(feature = "ssr")]
-use super::models::{insert_activity, Activity, DatabaseEntry, Lap, New, Record, Session};
+use super::models::{
+    insert_activity, insert_records, Activity, DatabaseEntry, Lap, New, Record, Session,
+};
 #[cfg(feature = "ssr")]
 use super::state::AppState;
 #[cfg(feature = "ssr")]
@@ -35,7 +37,7 @@ pub async fn upload_fit_file(
     };
     while let Some(field) = multipart.next_field().await.unwrap() {
         let data = field.bytes().await.unwrap();
-        let result = process_fit_file(data, user.id, &state.pool).await;
+        let result = process_fit_file(data, user.id, state.pool.clone()).await;
         if let Err(x) = result {
             return (StatusCode::BAD_REQUEST, format!("{}", x));
         }
@@ -44,11 +46,7 @@ pub async fn upload_fit_file(
 }
 
 #[cfg(feature = "ssr")]
-async fn process_fit_file<'a>(
-    data: Bytes,
-    user_id: i64,
-    executor: impl PgExecutor<'a>,
-) -> Result<()> {
+async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Result<()> {
     let mut records: Vec<DatabaseEntry<New, Record>> = Vec::new();
     let mut sessions: Vec<DatabaseEntry<New, Session>> = Vec::new();
     let mut laps: Vec<DatabaseEntry<New, Lap>> = Vec::new();
@@ -91,13 +89,23 @@ async fn process_fit_file<'a>(
         }
     }
     if let Some(activity) = activity {
-        let result = insert_activity(activity, user_id, executor).await;
+        let mut tx = executor.begin().await?;
+        let result = insert_activity(activity, user_id, &mut *tx).await;
         if let Err(x) = result {
             bail!("activity wasn't inserted: {}", x);
+        };
+        let activity = result.unwrap();
+        let result = insert_records(records, activity.extra.activity_id, &mut *tx).await;
+        if let Err(x) = result {
+            bail!("couldn't insert records: {}", x);
         }
+        let tx_result = tx.commit().await;
+        if let Err(x) = tx_result {
+            bail!("Transaction failed, try again: {}", x);
+        };
     } else {
         bail!("No activity found in fit file, may be corrupt");
-    }
+    };
     // leptos::logging::log!("Parsed records: {:?}", records);
     Ok(())
 }

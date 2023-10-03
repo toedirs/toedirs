@@ -1,7 +1,7 @@
 use chrono::{DateTime, Local};
 use fitparser::{profile::MesgNum, FitDataRecord, Value};
 #[cfg(feature = "ssr")]
-use sqlx::{query, Row};
+use sqlx::{query, QueryBuilder, Row};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -22,13 +22,13 @@ pub struct DatabaseEntry<S: DatabaseState, T> {
 pub struct New;
 #[non_exhaustive]
 #[derive(Debug, Clone)]
-pub struct Inserted {
+pub struct Stored {
     pub activity_id: i64,
 }
 
 pub trait DatabaseState {}
 impl DatabaseState for New {}
-impl DatabaseState for Inserted {}
+impl DatabaseState for Stored {}
 
 #[derive(Debug, Clone)]
 pub struct Coordinates {
@@ -40,7 +40,7 @@ pub struct Coordinates {
 #[derive(Debug, Clone)]
 pub struct Record {
     pub timestamp: DateTime<Local>,
-    pub heartrate: Option<u8>,
+    pub heartrate: Option<i16>,
     pub coordinates: Option<Coordinates>,
     pub distance: Option<f64>,
     pub speed: Option<f64>,
@@ -73,7 +73,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Record> {
         let heartrate = heartrate
             .map(|hr| hr.clone().into_value())
             .and_then(|hr| match hr {
-                Value::UInt8(hr) => Some(hr),
+                Value::UInt8(hr) => Some(i16::from(hr)),
                 _ => None,
             });
 
@@ -543,7 +543,7 @@ pub async fn insert_activity(
     activity: DatabaseEntry<New, Activity>,
     user_id: i64,
     executor: impl sqlx::PgExecutor<'_>,
-) -> Result<DatabaseEntry<Inserted, Activity>, ModelError> {
+) -> Result<DatabaseEntry<Stored, Activity>, ModelError> {
     let result = query(
         r#"
         INSERT INTO activities (user_id, timestamp, duration)
@@ -563,6 +563,31 @@ pub async fn insert_activity(
 
     Ok(DatabaseEntry {
         state: activity.state,
-        extra: Inserted { activity_id },
+        extra: Stored { activity_id },
     })
+}
+#[cfg(feature = "ssr")]
+pub async fn insert_records(
+    records: Vec<DatabaseEntry<New, Record>>,
+    activity_id: i64,
+    executor: impl sqlx::PgExecutor<'_>,
+) -> Result<(), ModelError> {
+    let mut builder = QueryBuilder::new(
+        r#"
+        INSERT INTO records(activity_id, timestamp, heartrate)
+        "#,
+    );
+    builder.push_values(records, |mut b, record| {
+        b.push_bind(activity_id)
+            .push_bind(record.state.timestamp)
+            .push_bind(record.state.heartrate.map(|v| i16::from(v)));
+    });
+    let query = builder.build();
+
+    query
+        .execute(executor)
+        .await
+        .map_err(|e| ModelError::InsertError(format!("Couldn't insert activity: {}", e)))?;
+
+    Ok(())
 }
