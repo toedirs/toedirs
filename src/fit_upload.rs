@@ -1,3 +1,4 @@
+#[cfg(feature = "ssr")]
 use anyhow::{bail, Context, Result};
 #[cfg(feature = "ssr")]
 use axum::{
@@ -5,15 +6,15 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+#[cfg(feature = "ssr")]
 use bytes::Bytes;
-use chrono::{DateTime, Local};
-use fitparser::{profile::MesgNum, FitDataRecord, Value};
 use leptos::ev::SubmitEvent;
 use leptos::*;
 use leptos_router::*;
 #[cfg(feature = "ssr")]
-use sqlx::{PgExecutor, PgPool};
+use sqlx::PgPool;
 
+#[cfg(feature = "ssr")]
 use super::auth::User;
 #[cfg(feature = "ssr")]
 use super::models::{
@@ -72,7 +73,7 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
                     .context("Couldn't parse record")?;
             }
             fitparser::profile::MesgNum::Activity => {
-                if let Some(_) = activity {
+                if activity.is_some() {
                     bail!("Found more than one activity");
                 }
                 activity = Some(
@@ -117,7 +118,7 @@ pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> imp
         println!("hidden?")
     };
     leptos::view! {
-        <Show when=move || { show() } fallback=|| { () }>
+        <Show when=move || { show() } fallback=|| { }>
             <div
                 class="modal bottom-sheet"
                 style="z-index: 1003; display: block; opacity: 1; bottom: 0%"

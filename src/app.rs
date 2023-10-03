@@ -3,7 +3,6 @@ use crate::{
     error_template::{AppError, ErrorTemplate},
     fit_upload::FitUploadForm,
 };
-use leptos::logging::log;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
@@ -64,7 +63,7 @@ pub fn App() -> impl IntoView {
                     </a>
                     <ul id="nav-mobile" class="right hide-on-med-and-down">
                         <ProtectedContentWrapper
-                            when=user.clone()
+                            when=user
                             fallback=move || {
                                 view! {
                                     <li>
@@ -117,7 +116,7 @@ pub fn App() -> impl IntoView {
                             view=move || {
                                 view! {
                                     <ProtectedContentWrapper
-                                        when=user.clone()
+                                        when=user
                                         fallback=move || view! { <Home/> }
                                     >
                                         <Overview/>

@@ -3,7 +3,7 @@ use fitparser::{profile::MesgNum, FitDataRecord, Value};
 #[cfg(feature = "ssr")]
 use itertools::Itertools;
 #[cfg(feature = "ssr")]
-use sqlx::{query, QueryBuilder, Row};
+use sqlx::{query, Row};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -614,27 +614,6 @@ pub async fn insert_records(
         "#,
         &activity_ids[..],&timestamp[..], &heartrate[..] as _, &distance[..] as _, &speed[..] as _, &altitude[..] as _, &latitude[..] as _, &longitude[..] as _).execute(executor).await
         .map_err(|e| ModelError::InsertError(format!("Couldn't insert activity: {}", e)))?;
-    // let mut builder = QueryBuilder::new(
-    //     r#"
-    //     INSERT INTO records(activity_id, timestamp, heartrate, distance, speed, altitude, latitude, longitude)
-    //     "#,
-    // );
-    // builder.push_values(records, |mut b, record| {
-    //     b.push_bind(activity_id)
-    //         .push_bind(record.state.timestamp)
-    //         .push_bind(record.state.heartrate)
-    //         .push_bind(record.state.distance)
-    //         .push_bind(record.state.speed)
-    //         .push_bind(record.state.altitude)
-    //         .push_bind(record.state.latitude)
-    //         .push_bind(record.state.longitude);
-    // });
-    // let query = builder.build();
-
-    // query
-    //     .execute(executor)
-    //     .await
-    //     .map_err(|e| ModelError::InsertError(format!("Couldn't insert activity: {}", e)))?;
 
     Ok(())
 }
