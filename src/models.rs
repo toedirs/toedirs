@@ -339,6 +339,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
             _ => return Err(ModelError::ParseError("Not a Lap".to_string())),
         };
         let fields = value.fields();
+        leptos::logging::log!("fields: {:?}",fields);
         let start_time =
             fields
                 .iter()
@@ -576,6 +577,7 @@ pub async fn insert_activity(
         extra: Stored { activity_id },
     })
 }
+
 #[cfg(feature = "ssr")]
 pub async fn insert_records(
     records: Vec<DatabaseEntry<New, Record>>,
@@ -613,7 +615,172 @@ pub async fn insert_records(
         FROM UNNEST($1::bigint[], $2::timestamptz[], $3::smallint[], $4::float8[], $5::float8[], $6::float8[], $7::float8[], $8::float8[])
         "#,
         &activity_ids[..],&timestamp[..], &heartrate[..] as _, &distance[..] as _, &speed[..] as _, &altitude[..] as _, &latitude[..] as _, &longitude[..] as _).execute(executor).await
-        .map_err(|e| ModelError::InsertError(format!("Couldn't insert activity: {}", e)))?;
+        .map_err(|e| ModelError::InsertError(format!("Couldn't insert records: {}", e)))?;
+
+    Ok(())
+}
+#[cfg(feature = "ssr")]
+pub async fn insert_sessions(
+    sessions: Vec<DatabaseEntry<New, Session>>,
+    activity_id: i64,
+    executor: impl sqlx::PgExecutor<'_>,
+) -> Result<(), ModelError> {
+    let num_sessions = sessions.len();
+    let activity_ids: Vec<i64> = std::iter::repeat(activity_id).take(num_sessions).collect();
+    let (
+    start_time,
+    end_time,
+    sport,
+    distance,
+    calories,
+    average_heartrate,
+    min_heartrate,
+    max_heartrate,
+    average_power,
+    ascent,
+    descent,
+    average_speed,
+    
+    ): (
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+    ) = sessions.clone()
+        .into_iter()
+        .map(|r| {
+            (
+                r.state.start_time,
+                r.state.end_time,
+                r.state.sport,
+                r.state.distance,
+                r.state.calories,
+                r.state.average_heartrate,
+                r.state.min_heartrate,
+                r.state.max_heartrate,
+                r.state.average_power,
+                r.state.ascent,
+                r.state.descent,
+                r.state.average_speed,
+            )
+        })
+        .multiunzip();
+    // itertools only supports up to 12 iterators, so we do this one separately
+    let max_speed: Vec<_> = sessions.into_iter().map(|r|r.state.max_speed).collect();
+    sqlx::query!(
+        r#"
+        INSERT INTO sessions(activity_id,start_time,end_time,sport,distance,calories,average_heartrate,min_heartrate,max_heartrate,average_power,ascent,descent,average_speed,max_speed)
+        SELECT *
+        FROM UNNEST($1::bigint[], $2::timestamptz[],$3::timestamptz[], $4::varchar[], $5::float8[], $6::int[], $7::smallint[], $8::smallint[], $9::smallint[], $10::int[], $11::int[], $12::int[], $13::float8[], $14::float8[])
+        "#,
+        &activity_ids[..],
+        &start_time[..] as _,
+        &end_time[..] as _,
+        &sport[..] as _,
+        &distance[..] as _,
+        &calories[..] as _,
+        &average_heartrate[..] as _,
+        &min_heartrate[..] as _,
+        &max_heartrate[..] as _,
+        &average_power[..] as _,
+        &ascent[..] as _,
+        &descent[..] as _,
+        &average_speed[..] as _,
+        &max_speed[..] as _,
+        
+    ).execute(executor).await
+        .map_err(|e| ModelError::InsertError(format!("Couldn't insert session: {}", e)))?;
+
+    Ok(())
+}
+
+#[cfg(feature = "ssr")]
+pub async fn insert_laps(
+    laps: Vec<DatabaseEntry<New, Lap>>,
+    activity_id: i64,
+    executor: impl sqlx::PgExecutor<'_>,
+) -> Result<(), ModelError> {
+    let num_laps = laps.len();
+    let activity_ids: Vec<i64> = std::iter::repeat(activity_id).take(num_laps).collect();
+    let (
+    start_time,
+    end_time,
+    sport,
+    distance,
+    calories,
+    average_heartrate,
+    min_heartrate,
+    max_heartrate,
+    average_power,
+    ascent,
+    descent,
+    average_speed,
+    
+    ): (
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+    ) = laps.clone()
+        .into_iter()
+        .map(|r| {
+            (
+                r.state.start_time,
+                r.state.end_time,
+                r.state.sport,
+                r.state.distance,
+                r.state.calories,
+                r.state.average_heartrate,
+                r.state.min_heartrate,
+                r.state.max_heartrate,
+                r.state.average_power,
+                r.state.ascent,
+                r.state.descent,
+                r.state.average_speed,
+            )
+        })
+        .multiunzip();
+    // itertools only supports up to 12 iterators, so we do this one separately
+    let max_speed: Vec<_> = laps.into_iter().map(|r|r.state.max_speed).collect();
+    sqlx::query!(
+        r#"
+        INSERT INTO laps(activity_id,start_time,end_time,sport,distance,calories,average_heartrate,min_heartrate,max_heartrate,average_power,ascent,descent,average_speed,max_speed)
+        SELECT *
+        FROM UNNEST($1::bigint[], $2::timestamptz[],$3::timestamptz[], $4::varchar[], $5::float8[], $6::int[], $7::smallint[], $8::smallint[], $9::smallint[], $10::int[], $11::int[], $12::int[], $13::float8[], $14::float8[])
+        "#,
+        &activity_ids[..],
+        &start_time[..] as _,
+        &end_time[..] as _,
+        &sport[..] as _,
+        &distance[..] as _,
+        &calories[..] as _,
+        &average_heartrate[..] as _,
+        &min_heartrate[..] as _,
+        &max_heartrate[..] as _,
+        &average_power[..] as _,
+        &ascent[..] as _,
+        &descent[..] as _,
+        &average_speed[..] as _,
+        &max_speed[..] as _,
+        
+    ).execute(executor).await
+        .map_err(|e| ModelError::InsertError(format!("Couldn't insert lap: {}", e)))?;
 
     Ok(())
 }

@@ -18,7 +18,8 @@ use sqlx::PgPool;
 use super::auth::User;
 #[cfg(feature = "ssr")]
 use super::models::{
-    insert_activity, insert_records, Activity, DatabaseEntry, Lap, New, Record, Session,
+    insert_activity, insert_laps, insert_records, insert_sessions, Activity, DatabaseEntry, Lap,
+    New, Record, Session,
 };
 #[cfg(feature = "ssr")]
 use super::state::AppState;
@@ -99,6 +100,14 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
         let result = insert_records(records, activity.extra.activity_id, &mut *tx).await;
         if let Err(x) = result {
             bail!("couldn't insert records: {}", x);
+        }
+        let result = insert_sessions(sessions, activity.extra.activity_id, &mut *tx).await;
+        if let Err(x) = result {
+            bail!("couldn't insert sessions: {}", x);
+        }
+        let result = insert_laps(laps, activity.extra.activity_id, &mut *tx).await;
+        if let Err(x) = result {
+            bail!("couldn't insert laps: {}", x);
         }
         let tx_result = tx.commit().await;
         if let Err(x) = tx_result {
