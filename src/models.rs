@@ -1,6 +1,8 @@
 use chrono::{DateTime, Local};
 use fitparser::{profile::MesgNum, FitDataRecord, Value};
 #[cfg(feature = "ssr")]
+use itertools::Itertools;
+#[cfg(feature = "ssr")]
 use sqlx::{query, QueryBuilder, Row};
 use thiserror::Error;
 
@@ -41,7 +43,8 @@ pub struct Coordinates {
 pub struct Record {
     pub timestamp: DateTime<Local>,
     pub heartrate: Option<i16>,
-    pub coordinates: Option<Coordinates>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
     pub distance: Option<f64>,
     pub speed: Option<f64>,
     pub altitude: Option<f64>,
@@ -78,15 +81,17 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Record> {
             });
 
         let latitude = fields.iter().find(|&f| f.name() == "position_lat");
+        let latitude = latitude
+            .map(|val| val.clone().into_value())
+            .and_then(|val| match val {
+                Value::SInt32(val) => Some(int_to_coord(val)),
+                _ => None,
+            });
         let longitude = fields.iter().find(|&f| f.name() == "position_long");
-        let coordinates = latitude
-            .zip(longitude)
-            .map(|(lat, long)| (lat.clone().into_value(), long.clone().into_value()))
-            .and_then(|(lat, long)| match (lat, long) {
-                (Value::SInt32(lat), Value::SInt32(long)) => Some(Coordinates {
-                    latitude: lat,
-                    longitude: long,
-                }),
+        let longitude = longitude
+            .map(|val| val.clone().into_value())
+            .and_then(|val| match val {
+                Value::SInt32(val) => Some(int_to_coord(val)),
                 _ => None,
             });
 
@@ -122,7 +127,8 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Record> {
             state: Box::new(Record {
                 timestamp,
                 heartrate,
-                coordinates,
+                latitude,
+                longitude,
                 altitude,
                 distance,
                 speed,
@@ -138,13 +144,13 @@ pub struct Session {
     pub end_time: DateTime<Local>,
     pub sport: Option<String>,
     pub distance: Option<f64>,
-    pub calories: Option<u16>,
-    pub average_heartrate: Option<u8>,
-    pub min_heartrate: Option<u8>,
-    pub max_heartrate: Option<u8>,
-    pub average_power: Option<u16>,
-    pub ascent: Option<u16>,
-    pub descent: Option<u16>,
+    pub calories: Option<i32>,
+    pub average_heartrate: Option<i16>,
+    pub min_heartrate: Option<i16>,
+    pub max_heartrate: Option<i16>,
+    pub average_power: Option<i32>,
+    pub ascent: Option<i32>,
+    pub descent: Option<i32>,
     pub average_speed: Option<f64>,
     pub max_speed: Option<f64>,
 }
@@ -199,7 +205,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Session> {
         let average_heartrate = average_heartrate
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt8(val) => Some(val),
+                Value::UInt8(val) => Some(i16::from(val)),
                 _ => None,
             });
 
@@ -207,7 +213,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Session> {
         let min_heartrate = min_heartrate
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt8(val) => Some(val),
+                Value::UInt8(val) => Some(i16::from(val)),
                 _ => None,
             });
 
@@ -215,7 +221,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Session> {
         let max_heartrate = max_heartrate
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt8(val) => Some(val),
+                Value::UInt8(val) => Some(i16::from(val)),
                 _ => None,
             });
 
@@ -225,7 +231,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Session> {
         let calories = calories
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt16(val) => Some(val),
+                Value::UInt16(val) => Some(i32::from(val)),
                 _ => None,
             });
 
@@ -245,7 +251,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Session> {
         let ascent = ascent
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt16(val) => Some(val),
+                Value::UInt16(val) => Some(i32::from(val)),
                 _ => None,
             });
 
@@ -255,7 +261,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Session> {
         let descent = descent
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt16(val) => Some(val),
+                Value::UInt16(val) => Some(i32::from(val)),
                 _ => None,
             });
 
@@ -263,7 +269,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Session> {
         let average_power = average_power
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt16(val) => Some(val),
+                Value::UInt16(val) => Some(i32::from(val)),
                 _ => None,
             });
 
@@ -314,13 +320,13 @@ pub struct Lap {
     pub end_time: DateTime<Local>,
     pub sport: Option<String>,
     pub distance: Option<f64>,
-    pub calories: Option<u16>,
-    pub average_heartrate: Option<u8>,
-    pub min_heartrate: Option<u8>,
-    pub max_heartrate: Option<u8>,
-    pub average_power: Option<u16>,
-    pub ascent: Option<u16>,
-    pub descent: Option<u16>,
+    pub calories: Option<i32>,
+    pub average_heartrate: Option<i16>,
+    pub min_heartrate: Option<i16>,
+    pub max_heartrate: Option<i16>,
+    pub average_power: Option<i32>,
+    pub ascent: Option<i32>,
+    pub descent: Option<i32>,
     pub average_speed: Option<f64>,
     pub max_speed: Option<f64>,
 }
@@ -374,7 +380,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
         let average_heartrate = average_heartrate
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt8(val) => Some(val),
+                Value::UInt8(val) => Some(i16::from(val)),
                 _ => None,
             });
 
@@ -382,7 +388,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
         let min_heartrate = min_heartrate
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt8(val) => Some(val),
+                Value::UInt8(val) => Some(i16::from(val)),
                 _ => None,
             });
 
@@ -390,7 +396,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
         let max_heartrate = max_heartrate
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt8(val) => Some(val),
+                Value::UInt8(val) => Some(i16::from(val)),
                 _ => None,
             });
 
@@ -400,7 +406,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
         let calories = calories
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt16(val) => Some(val),
+                Value::UInt16(val) => Some(i32::from(val)),
                 _ => None,
             });
 
@@ -420,7 +426,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
         let ascent = ascent
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt16(val) => Some(val),
+                Value::UInt16(val) => Some(i32::from(val)),
                 _ => None,
             });
 
@@ -430,7 +436,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
         let descent = descent
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt16(val) => Some(val),
+                Value::UInt16(val) => Some(i32::from(val)),
                 _ => None,
             });
 
@@ -438,7 +444,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
         let average_power = average_power
             .map(|val| val.clone().into_value())
             .and_then(|val| match val {
-                Value::UInt16(val) => Some(val),
+                Value::UInt16(val) => Some(i32::from(val)),
                 _ => None,
             });
 
@@ -538,6 +544,10 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Activity> {
     }
 }
 
+fn int_to_coord(value: i32) -> f64 {
+    value as f64 / (u64::pow(2, 32) as f64 / 360.0)
+}
+
 #[cfg(feature = "ssr")]
 pub async fn insert_activity(
     activity: DatabaseEntry<New, Activity>,
@@ -572,22 +582,59 @@ pub async fn insert_records(
     activity_id: i64,
     executor: impl sqlx::PgExecutor<'_>,
 ) -> Result<(), ModelError> {
-    let mut builder = QueryBuilder::new(
+    let num_records = records.len();
+    let activity_ids: Vec<i64> = std::iter::repeat(activity_id).take(num_records).collect();
+    let (timestamp, heartrate, distance, speed, altitude, latitude, longitude): (
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+        Vec<_>,
+    ) = records
+        .into_iter()
+        .map(|r| {
+            (
+                r.state.timestamp,
+                r.state.heartrate,
+                r.state.distance,
+                r.state.speed,
+                r.state.altitude,
+                r.state.latitude,
+                r.state.longitude,
+            )
+        })
+        .multiunzip();
+    sqlx::query!(
         r#"
-        INSERT INTO records(activity_id, timestamp, heartrate)
+        INSERT INTO records(activity_id, timestamp, heartrate, distance, speed, altitude, latitude, longitude)
+        SELECT *
+        FROM UNNEST($1::bigint[], $2::timestamptz[], $3::smallint[], $4::float8[], $5::float8[], $6::float8[], $7::float8[], $8::float8[])
         "#,
-    );
-    builder.push_values(records, |mut b, record| {
-        b.push_bind(activity_id)
-            .push_bind(record.state.timestamp)
-            .push_bind(record.state.heartrate.map(|v| i16::from(v)));
-    });
-    let query = builder.build();
-
-    query
-        .execute(executor)
-        .await
+        &activity_ids[..],&timestamp[..], &heartrate[..] as _, &distance[..] as _, &speed[..] as _, &altitude[..] as _, &latitude[..] as _, &longitude[..] as _).execute(executor).await
         .map_err(|e| ModelError::InsertError(format!("Couldn't insert activity: {}", e)))?;
+    // let mut builder = QueryBuilder::new(
+    //     r#"
+    //     INSERT INTO records(activity_id, timestamp, heartrate, distance, speed, altitude, latitude, longitude)
+    //     "#,
+    // );
+    // builder.push_values(records, |mut b, record| {
+    //     b.push_bind(activity_id)
+    //         .push_bind(record.state.timestamp)
+    //         .push_bind(record.state.heartrate)
+    //         .push_bind(record.state.distance)
+    //         .push_bind(record.state.speed)
+    //         .push_bind(record.state.altitude)
+    //         .push_bind(record.state.latitude)
+    //         .push_bind(record.state.longitude);
+    // });
+    // let query = builder.build();
+
+    // query
+    //     .execute(executor)
+    //     .await
+    //     .map_err(|e| ModelError::InsertError(format!("Couldn't insert activity: {}", e)))?;
 
     Ok(())
 }
