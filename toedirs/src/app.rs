@@ -45,6 +45,37 @@ pub fn App() -> impl IntoView {
         },
     );
     provide_meta_context();
+    let test: Vec<(usize, f64)> = vec![
+        (1, 2.0),
+        (2, 3.0),
+        (3, 1.5),
+        (4, 7.0),
+        (5, 1.0),
+        (6, 2.5),
+        (7, 9.9),
+    ];
+    let test2: Vec<(usize, f64)> = vec![
+        (1, 7.0),
+        (2, 11.0),
+        (3, 2.0),
+        (4, 5.0),
+        (5, 5.0),
+        (6, 9.0),
+        (7, 3.0),
+        (8, 5.0),
+        (9, 11.0),
+        (10, 5.0),
+        (11, 3.0),
+        (12, 5.0),
+        (13, 7.0),
+        (14, 8.0),
+        (15, 6.0),
+        (16, 4.0),
+        (17, 1.0),
+        (18, 6.0),
+        (19, 1.0),
+    ];
+    let (test, set_test) = create_signal(test);
     view! {
         <Stylesheet id="leptos" href="/pkg/toedirs.css"/>
 
@@ -111,7 +142,8 @@ pub fn App() -> impl IntoView {
             </nav>
             <main>
                 <div class="container">
-                    <BarChart data=&[&1,&2,&1,&5,&3,&4] attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
+                    <BarChart values=test attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
+                    <button on:click=move|_|set_test(test2.clone())>"Change"</button>
                     <Routes>
                         <Route
                             path="/"
