@@ -111,7 +111,7 @@ pub fn App() -> impl IntoView {
             </nav>
             <main>
                 <div class="container">
-                    <BarChart data=&[&1,&2,&1,&5,&3,&4] attr:width="100" attr:height="100" />
+                    <BarChart data=&[&1,&2,&1,&5,&3,&4] attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
                     <Routes>
                         <Route
                             path="/"
