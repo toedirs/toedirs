@@ -1,7 +1,11 @@
 [workspace]
 
-members = ["toedirs"]
+members = ["toedirs", "leptos_charts"]
 resolver = "2"
+
+[workspace.dependencies]
+leptos = { version = "0.5.0", features = ["nightly"] }
+leptos_charts = { path = "./leptos_charts", version = "0.1.0" }
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

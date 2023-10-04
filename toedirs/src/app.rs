@@ -4,6 +4,7 @@ use crate::{
     fit_upload::FitUploadForm,
 };
 use leptos::*;
+use leptos_charts::*;
 use leptos_meta::*;
 use leptos_router::*;
 
@@ -110,6 +111,7 @@ pub fn App() -> impl IntoView {
             </nav>
             <main>
                 <div class="container">
+                    <BarChart data=&[&1,&2,&1,&5,&3,&4] attr:width="100" attr:height="100" />
                     <Routes>
                         <Route
                             path="/"
