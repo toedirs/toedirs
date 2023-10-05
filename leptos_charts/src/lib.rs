@@ -4,6 +4,7 @@ const CATPPUCCIN_COLORS: &[&str] = &[
     "#dc8a78", //rosewater
     "#8839ef", //Mauve
     "#fe640b", //Peach
+    "#40a02b", //green
     "#04a5e5", //Sky
     "#ea76cb", //Pink
     "#1e66f5", //Blue
@@ -16,7 +17,7 @@ const CATPPUCCIN_COLORS: &[&str] = &[
 
 #[component]
 pub fn BarChart(
-    values: ReadSignal<Vec<(usize, f64)>>,
+    values: ReadSignal<Vec<f64>>,
     // colors: Option<&'chart [&'chart str]>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView {
@@ -25,29 +26,32 @@ pub fn BarChart(
         values
             .get()
             .iter()
-            .max_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|(_i, v)| v.clone())
+            .max_by(|a, b| a.total_cmp(&b))
+            .map(|v| v.clone())
             .unwrap()
     });
     let values = create_memo(move |_| {
         values
             .get()
             .into_iter()
-            .map(|(i, v)| (i, v))
             .zip(CATPPUCCIN_COLORS.into_iter().cycle())
-            .collect::<Vec<((usize, f64), &&str)>>()
+            .enumerate()
+            .collect::<Vec<(usize, (f64, &&str))>>()
     });
 
     view! {
         <svg viewBox="0 0 100 100" {..attrs}>
             <g transform="matrix(1 0 0 -1 0 100)">
-                {move || values.get().into_iter().map(|((i, v), color)|view!{
+                {move || values.get().into_iter().map(|(i, (v, color))|view!{
                     <rect
                         x=move || (100.0 / num_bars.get() * i as f64)
                         y=0
                         width=move || (80.0 / num_bars.get())
                         height=move || (100.0 * v / max.get())
-                        style=format!("fill:{}", color)
+                        fill=*color
+                        fill-opacity="0.6"
+                        stroke=*color
+                        stroke-width="0.5"
                     />
                 }).collect_view()}
             </g>
