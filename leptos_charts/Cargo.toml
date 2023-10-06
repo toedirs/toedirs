@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 leptos = { workspace = true, features = ["nightly"] }
+num-traits = { version = "0.2.16" }
