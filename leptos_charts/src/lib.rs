@@ -139,38 +139,36 @@ where
                         <line x1="7%" y1=format!("{}%", t) x2="9.8%" y2=format!("{}%", t) stroke="black" strocke-width="1px" vector-effect="non-scaling-stroke"/>
                         <text x="6.9%" y=format!("{}%", t) font-size="20px" dy="5px" text-anchor="end" vector-effect="non-scaling-stroke">{s}</text>
                     }).collect_view()}
-                <svg x="10%" width="90%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <g transform="matrix(1 0 0 -1 0 100)">
                         {move || values.get().into_iter().map(|(i, (v, color))|{
                             let el = create_node_ref::<Rect>();
                             let is_hovered = use_element_hover(el);
                             view!{
-                            <rect
-                                node_ref=el
-                                x=move || (5.0  + 95.0 / num_bars.get() * i as f64)
-                                y=0
-                                width=move || (80.0 / num_bars.get())
-                                height=move || (100.0 * (v - tick_config.get().min_point) / (tick_config.get().max_point - tick_config.get().min_point))
-                                fill=*color
-                                fill-opacity=move||if is_hovered.get(){"0.8"}else{"0.6"}
-                                stroke=*color
-                                stroke-width=move||if is_hovered.get(){"3px"}else{"1px"}
-                                vector-effect="non-scaling-stroke"
-                            />
-                            <Show when=move ||is_hovered.get() fallback=||()>
+                            <svg x="10%" width="90%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
                                 <g transform="matrix(1 0 0 -1 0 100)">
-                                    <text
-                                        font-size="8px" vector-effect="non-scaling-stroke"
-                                        x=move || (5.0  + 95.0 / num_bars.get() * (i as f64 + 0.5))
-                                        y=move||(100.0 - 100.0 * (v - tick_config.get().min_point) / (tick_config.get().max_point - tick_config.get().min_point))
-                                        dy="-2"
-                                        dx="-2"
-                                    >{v}</text>
+                                    <rect
+                                        node_ref=el
+                                        x=move || (5.0  + 95.0 / num_bars.get() * i as f64)
+                                        y=0
+                                        width=move || (80.0 / num_bars.get())
+                                        height=move || (100.0 * (v - tick_config.get().min_point) / (tick_config.get().max_point - tick_config.get().min_point))
+                                        fill=*color
+                                        fill-opacity=move||if is_hovered.get(){"0.8"}else{"0.6"}
+                                        stroke=*color
+                                        stroke-width=move||if is_hovered.get(){"3px"}else{"1px"}
+                                        vector-effect="non-scaling-stroke"
+                                    />
                                 </g>
+                            </svg>
+                            <Show when=move ||is_hovered.get() fallback=||()>
+                                <text
+                                    font-size="15px" vector-effect="non-scaling-stroke"
+                                    x=move ||format!("{}%", (15.0  + 85.0 / num_bars.get() * (i as f64 + 0.5)))
+                                    y=move||format!("{}%", (100.0 - 100.0 * (v - tick_config.get().min_point) / (tick_config.get().max_point - tick_config.get().min_point)))
+                                    dy="-5"
+                                    dx="-9"
+                                >{v}</text>
                             </Show>
                         }}).collect_view()}
-                    </g>
-                </svg>
             </svg>
         </svg>
     }
