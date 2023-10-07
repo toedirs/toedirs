@@ -1,3 +1,7 @@
+#![feature(iter_map_windows)]
+use std::{f64::consts::TAU, iter};
+
+use itertools::Itertools;
 use leptos::{svg::*, *};
 use leptos_use::*;
 use num_traits::ToPrimitive;
@@ -173,34 +177,64 @@ where
         </svg>
     }
 }
-// #[component]
-// pub fn BarChart(
-//     values: ReadSignal<Vec<(usize, f64)>>,
-//     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
-// ) -> impl IntoView {
-//     let num_bars = create_memo(move |_| values.get().len() as f64);
-//     let max = create_memo(move |_| {
-//         values
-//             .get()
-//             .iter()
-//             .max_by(|a, b| a.1.total_cmp(&b.1))
-//             .map(|(i, v)| v.clone())
-//             .unwrap()
-//     });
 
-//     view! {
-//         <svg viewBox="0 0 100 100" {..attrs}>
-//             <g transform="matrix(1 0 0 -1 0 100)">
-//                 <For
-//                     each=move||values.get()
-//                     key=|v|v.0
-//                     let:entry>
-//                     <rect x=move || (100.0 / num_bars.get() * entry.0 as f64) y=0
-//                     width=move || (80.0 / num_bars.get())
-//                     height=move || (100.0 * entry.1 / max.get())
-//                     ></rect>
-//                 </For>
-//             </g>
-//         </svg>
-//     }
-// }
+#[component]
+pub fn PieChart<T>(
+    values: ReadSignal<Vec<T>>,
+    options: ChartOptions,
+    // colors: Option<&'chart [&'chart str]>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView
+where
+    T: ToPrimitive + Clone + PartialOrd + 'static,
+{
+    let values = create_memo(move |_| {
+        values
+            .get()
+            .iter()
+            .map(|v| v.to_f64().unwrap())
+            .collect::<Vec<f64>>()
+    });
+    let sum = create_memo(move |_| values.get().iter().sum::<f64>());
+    let sorted_values = create_memo(move |_| {
+        iter::once((0.0, 99.0, 0.0))
+            .chain(
+                values
+                    .get()
+                    .into_iter()
+                    .sorted_by(|a, b| f64::partial_cmp(a, b).unwrap())
+                    .map(|f| (f, f / sum.get()))
+                    .scan((0.0, 0.0), |state, v| {
+                        *state = (v.0, state.1 + v.1);
+                        Some(*state)
+                    })
+                    .map(|(f, v)| (f, (v * TAU).cos() * 99.0, (v * TAU).sin() * 99.0)),
+            )
+            .map_windows(|[from, to]| {
+                (
+                    to.0,
+                    format!(
+                        "M0 0 {from_x} {from_y} A100 100 0 0 1 {to_x} {to_y}Z",
+                        from_x = from.1,
+                        from_y = from.2,
+                        to_x = to.1,
+                        to_y = to.2
+                    ),
+                )
+            })
+            .zip(CATPPUCCIN_COLORS.into_iter().cycle())
+            .collect::<Vec<((f64, String), &&str)>>()
+    });
+
+    view! {
+        <svg  {..attrs}>
+            <svg viewBox="0 0 200 200">
+                <g transform="translate(100,100)" stroke="#000" stroke-width="1">
+                    {move || sorted_values.get().into_iter().map(|((value, path),color) |view!{
+                        <path d=path fill=*color fill-opacity=0.6 stroke="#fff" vector-effect="non-scaling-stroke" />
+                    }).collect_view()}
+                </g>
+            </svg>
+        </svg>
+    }
+}

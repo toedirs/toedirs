@@ -120,7 +120,8 @@ pub fn App() -> impl IntoView {
             </nav>
             <main>
                 <div class="container">
-                    <BarChart values=test options=options attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
+                    // <BarChart values=test options=options attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
+                    <PieChart values=test options=options attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
                     <button on:click=move|_|set_test(test2.clone())>"Change"</button>
                     <Routes>
                         <Route
