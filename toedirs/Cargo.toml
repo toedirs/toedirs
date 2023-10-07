@@ -42,7 +42,7 @@ itertools = "0.11.0"
 leptos_charts = { workspace = true }
 
 [features]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_charts/hydrate"]
 ssr = [
   "dep:axum",
   "dep:tokio",
@@ -52,6 +52,7 @@ ssr = [
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
+  "leptos_charts/ssr",
   "dep:tracing",
   "dep:futures-util",
   "dep:sqlx",
