@@ -16,6 +16,16 @@ const CATPPUCCIN_COLORS: &[&str] = &[
     "#e64553", //maroon
 ];
 
+pub struct ChartOptions {
+    pub max_ticks: u8,
+}
+
+impl Default for ChartOptions {
+    fn default() -> Self {
+        Self { max_ticks: 5u8 }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 struct TickSpacing {
     min_point: f64,
@@ -51,9 +61,9 @@ fn nice_num(num: f64, round: bool) -> f64 {
     nice_fraction * 10.0f64.powf(exponent)
 }
 
-fn nice_ticks(min: f64, max: f64, max_ticks: Option<u8>) -> TickSpacing {
+fn nice_ticks(min: f64, max: f64, max_ticks: u8) -> TickSpacing {
     let range = nice_num(max - min, false);
-    let spacing = nice_num(range / (max_ticks.unwrap_or(5) - 1) as f64, true);
+    let spacing = nice_num(range / (max_ticks - 1) as f64, true);
     let min_point = (min / spacing).floor() * spacing;
     let max_point = (max / spacing).ceil() * spacing;
     let num_ticks = ((max_point - min_point) / spacing) as u8 + 1;
@@ -68,6 +78,7 @@ fn nice_ticks(min: f64, max: f64, max_ticks: Option<u8>) -> TickSpacing {
 #[component]
 pub fn BarChart<T>(
     values: ReadSignal<Vec<T>>,
+    options: ChartOptions,
     // colors: Option<&'chart [&'chart str]>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView
@@ -103,7 +114,7 @@ where
             .enumerate()
             .collect::<Vec<(usize, (f64, &&str))>>()
     });
-    let tick_config = create_memo(move |_| nice_ticks(min.get(), max.get(), None));
+    let tick_config = create_memo(move |_| nice_ticks(min.get(), max.get(), options.max_ticks));
     let ticks = create_memo(move |_| {
         let ticks = tick_config.get();
         leptos::logging::log!("{:?}", ticks);
@@ -129,7 +140,9 @@ where
                     }).collect_view()}
                 <svg x="10%" width="90%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <g transform="matrix(1 0 0 -1 0 100)">
-                        {move || values.get().into_iter().map(|(i, (v, color))|view!{
+                        {move || values.get().into_iter().map(|(i, (v, color))|
+                            // let el =
+                            view!{
                             <rect
                                 x=move || (5.0  + 95.0 / num_bars.get() * i as f64)
                                 y=0
@@ -138,7 +151,7 @@ where
                                 fill=*color
                                 fill-opacity="0.6"
                                 stroke=*color
-                                stroke-width="1px"
+                                stroke-width=move||"1px"
                                 vector-effect="non-scaling-stroke"
                             />
                         }).collect_view()}

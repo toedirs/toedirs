@@ -53,6 +53,7 @@ pub fn App() -> impl IntoView {
     // ];
     let test2: Vec<u8> = vec![7, 11, 2, 5, 5, 9, 3, 5, 11, 5, 3, 5, 7, 8, 6, 4, 1, 6, 1];
     let (test, set_test) = create_signal(test);
+    let options = ChartOptions { max_ticks: 4 };
     view! {
         <Stylesheet id="leptos" href="/pkg/toedirs.css"/>
 
@@ -119,7 +120,7 @@ pub fn App() -> impl IntoView {
             </nav>
             <main>
                 <div class="container">
-                    <BarChart values=test attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
+                    <BarChart values=test options=options attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
                     <button on:click=move|_|set_test(test2.clone())>"Change"</button>
                     <Routes>
                         <Route
