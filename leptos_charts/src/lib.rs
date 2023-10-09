@@ -220,21 +220,51 @@ where
                         to_x = to.1,
                         to_y = to.2
                     ),
+                    ((from.1 + to.1) / 2.0)
+                        / (f64::sqrt(
+                            ((from.1 + to.1) / 2.0).powi(2) + ((from.2 + to.2) / 2.0).powi(2),
+                        ))
+                        * 85.0,
+                    ((from.2 + to.2) / 2.0)
+                        / (f64::sqrt(
+                            ((from.1 + to.1) / 2.0).powi(2) + ((from.2 + to.2) / 2.0).powi(2),
+                        ))
+                        * 85.0,
                 )
             })
             .zip(CATPPUCCIN_COLORS.into_iter().cycle())
-            .collect::<Vec<((f64, String), &&str)>>()
+            .collect::<Vec<((f64, String, f64, f64), &&str)>>()
     });
 
     view! {
         <svg  {..attrs}>
-            <svg viewBox="0 0 200 200">
-                <g transform="translate(100,100)" stroke="#000" stroke-width="1">
-                    {move || sorted_values.get().into_iter().map(|((value, path),color) |view!{
-                        <path d=path fill=*color fill-opacity=0.6 stroke="#fff" vector-effect="non-scaling-stroke" />
-                    }).collect_view()}
-                </g>
-            </svg>
+            {move || sorted_values.get().into_iter().enumerate().map(|(i,((value, path, label_x, label_y),color)) |{
+                let el = create_node_ref::<Path>();
+                let is_hovered = use_element_hover(el);
+                view!{
+                    <svg viewBox="0 0 200 200">
+                        <g transform="translate(100,100)" stroke="#000" stroke-width="1">
+                            <Show when=move ||is_hovered.get() fallback=||()>
+                                    <text
+                                        font-size="15px" vector-effect="non-scaling-stroke"
+                                        x=label_x
+                                        y=label_y
+                                    >
+                                        <tspan
+                                            text-anchor="middle"
+                                            dominant-baseline="middle"
+                                        >
+                                            {value}
+                                        </tspan>
+                                    </text>
+                            </Show>
+                            <mask id=format!("cut-path-{}", i)>
+                                <path d=path.clone() fill="white" stroke="black" stroke-width="2" vector-effect="non-scaling-stroke" />
+                            </mask>
+                            <path node_ref=el d=path fill=*color fill-opacity=0.6 stroke=*color stroke-width="2" vector-effect="non-scaling-stroke" mask=move||if is_hovered.get(){"none".to_string()}else{format!("url(#cut-path-{})", i)}/>
+                        </g>
+                    </svg>
+                    }}).collect_view()}
         </svg>
     }
 }
