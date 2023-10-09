@@ -244,6 +244,10 @@ where
                 view!{
                     <svg viewBox="0 0 200 200">
                         <g transform="translate(100,100)" stroke="#000" stroke-width="1">
+                            <mask id=format!("cut-path-{}", i)>
+                                <path d=path.clone() fill="white" stroke="black" stroke-width="2" vector-effect="non-scaling-stroke" />
+                            </mask>
+                            <path node_ref=el d=path fill=*color fill-opacity=0.6 stroke=*color stroke-width="2" vector-effect="non-scaling-stroke" mask=move||if is_hovered.get(){"none".to_string()}else{format!("url(#cut-path-{})", i)}/>
                             <Show when=move ||is_hovered.get() fallback=||()>
                                     <text
                                         font-size="15px" vector-effect="non-scaling-stroke"
@@ -253,15 +257,12 @@ where
                                         <tspan
                                             text-anchor="middle"
                                             dominant-baseline="middle"
+                                            color="#000"
                                         >
                                             {value}
                                         </tspan>
                                     </text>
                             </Show>
-                            <mask id=format!("cut-path-{}", i)>
-                                <path d=path.clone() fill="white" stroke="black" stroke-width="2" vector-effect="non-scaling-stroke" />
-                            </mask>
-                            <path node_ref=el d=path fill=*color fill-opacity=0.6 stroke=*color stroke-width="2" vector-effect="non-scaling-stroke" mask=move||if is_hovered.get(){"none".to_string()}else{format!("url(#cut-path-{})", i)}/>
                         </g>
                     </svg>
                     }}).collect_view()}
