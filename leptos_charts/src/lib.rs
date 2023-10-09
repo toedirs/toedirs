@@ -135,44 +135,109 @@ where
     });
 
     view! {
-        <svg  {..attrs}>
+        <svg {..attrs}>
             <svg y="5%" height="90%" overflow="visible">
-                <line x1="9.8%" y1="0%" x2="9.8%" y2="100%" stroke="black" stroke-width="1px" vector-effect="non-scaling-stroke"/>
-                {move ||ticks.get().into_iter().map(|(t, s)|
-                        view!{
-                        <line x1="7%" y1=format!("{}%", t) x2="9.8%" y2=format!("{}%", t) stroke="black" strocke-width="1px" vector-effect="non-scaling-stroke"/>
-                        <text x="6.9%" y=format!("{}%", t) font-size="20px" dy="5px" text-anchor="end" vector-effect="non-scaling-stroke">{s}</text>
-                    }).collect_view()}
-                        {move || values.get().into_iter().map(|(i, (v, color))|{
+                <line
+                    x1="9.8%"
+                    y1="0%"
+                    x2="9.8%"
+                    y2="100%"
+                    stroke="black"
+                    stroke-width="1px"
+                    vector-effect="non-scaling-stroke"
+                ></line>
+                {move || {
+                    ticks
+                        .get()
+                        .into_iter()
+                        .map(|(t, s)| {
+                            view! {
+                                <line
+                                    x1="7%"
+                                    y1=format!("{}%", t)
+                                    x2="9.8%"
+                                    y2=format!("{}%", t)
+                                    stroke="black"
+                                    strocke-width="1px"
+                                    vector-effect="non-scaling-stroke"
+                                ></line>
+                                <text
+                                    x="6.9%"
+                                    y=format!("{}%", t)
+                                    font-size="20px"
+                                    dy="5px"
+                                    text-anchor="end"
+                                    vector-effect="non-scaling-stroke"
+                                >
+                                    {s}
+                                </text>
+                            }
+                        })
+                        .collect_view()
+                }}
+                {move || {
+                    values
+                        .get()
+                        .into_iter()
+                        .map(|(i, (v, color))| {
                             let el = create_node_ref::<Rect>();
                             let is_hovered = use_element_hover(el);
-                            view!{
-                            <svg x="10%" width="90%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                <g transform="matrix(1 0 0 -1 0 100)">
-                                    <rect
-                                        node_ref=el
-                                        x=move || (5.0  + 95.0 / num_bars.get() * i as f64)
-                                        y=0
-                                        width=move || (80.0 / num_bars.get())
-                                        height=move || (100.0 * (v - tick_config.get().min_point) / (tick_config.get().max_point - tick_config.get().min_point))
-                                        fill=*color
-                                        fill-opacity=move||if is_hovered.get(){"0.8"}else{"0.6"}
-                                        stroke=*color
-                                        stroke-width=move||if is_hovered.get(){"3px"}else{"1px"}
+                            view! {
+                                <svg
+                                    x="10%"
+                                    width="90%"
+                                    height="100%"
+                                    viewBox="0 0 100 100"
+                                    preserveAspectRatio="none"
+                                >
+                                    <g transform="matrix(1 0 0 -1 0 100)">
+                                        <rect
+                                            node_ref=el
+                                            x=move || (5.0 + 95.0 / num_bars.get() * i as f64)
+                                            y=0
+                                            width=move || (80.0 / num_bars.get())
+                                            height=move || {
+                                                (100.0 * (v - tick_config.get().min_point)
+                                                    / (tick_config.get().max_point
+                                                        - tick_config.get().min_point))
+                                            }
+                                            fill=*color
+                                            fill-opacity=move || {
+                                                if is_hovered.get() { "0.8" } else { "0.6" }
+                                            }
+                                            stroke=*color
+                                            stroke-width=move || {
+                                                if is_hovered.get() { "3px" } else { "1px" }
+                                            }
+                                            vector-effect="non-scaling-stroke"
+                                        ></rect>
+                                    </g>
+                                </svg>
+                                <Show when=move || is_hovered.get() fallback=|| ()>
+                                    <text
+                                        font-size="15px"
                                         vector-effect="non-scaling-stroke"
-                                    />
-                                </g>
-                            </svg>
-                            <Show when=move ||is_hovered.get() fallback=||()>
-                                <text
-                                    font-size="15px" vector-effect="non-scaling-stroke"
-                                    x=move ||format!("{}%", (15.0  + 85.0 / num_bars.get() * (i as f64 + 0.5)))
-                                    y=move||format!("{}%", (100.0 - 100.0 * (v - tick_config.get().min_point) / (tick_config.get().max_point - tick_config.get().min_point)))
-                                    dy="-5"
-                                    dx="-9"
-                                >{v}</text>
-                            </Show>
-                        }}).collect_view()}
+                                        x=move || {
+                                            format!(
+                                                "{}%", (15.0 + 85.0 / num_bars.get() * (i as f64 + 0.5))
+                                            )
+                                        }
+                                        y=move || {
+                                            format!(
+                                                "{}%", (100.0 - 100.0 * (v - tick_config.get().min_point) /
+                                                (tick_config.get().max_point - tick_config.get().min_point))
+                                            )
+                                        }
+                                        dy="-5"
+                                        dx="-9"
+                                    >
+                                        {v}
+                                    </text>
+                                </Show>
+                            }
+                        })
+                        .collect_view()
+                }}
             </svg>
         </svg>
     }
@@ -237,35 +302,65 @@ where
     });
 
     view! {
-        <svg  {..attrs}>
-            {move || sorted_values.get().into_iter().enumerate().map(|(i,((value, path, label_x, label_y),color)) |{
-                let el = create_node_ref::<Path>();
-                let is_hovered = use_element_hover(el);
-                view!{
-                    <svg viewBox="0 0 200 200">
-                        <g transform="translate(100,100)" stroke="#000" stroke-width="1">
-                            <mask id=format!("cut-path-{}", i)>
-                                <path d=path.clone() fill="white" stroke="black" stroke-width="2" vector-effect="non-scaling-stroke" />
-                            </mask>
-                            <path node_ref=el d=path fill=*color fill-opacity=0.6 stroke=*color stroke-width="2" vector-effect="non-scaling-stroke" mask=move||if is_hovered.get(){"none".to_string()}else{format!("url(#cut-path-{})", i)}/>
-                            <Show when=move ||is_hovered.get() fallback=||()>
-                                    <text
-                                        font-size="15px" vector-effect="non-scaling-stroke"
-                                        x=label_x
-                                        y=label_y
-                                    >
-                                        <tspan
-                                            text-anchor="middle"
-                                            dominant-baseline="middle"
-                                            color="#000"
+        <svg {..attrs}>
+            {move || {
+                sorted_values
+                    .get()
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, ((value, path, label_x, label_y), color))| {
+                        let el = create_node_ref::<Path>();
+                        let is_hovered = use_element_hover(el);
+                        view! {
+                            <svg viewBox="0 0 200 200">
+                                <g transform="translate(100,100)" stroke="#000" stroke-width="1">
+                                    <mask id=format!("cut-path-{}", i)>
+                                        <path
+                                            d=path.clone()
+                                            fill="white"
+                                            stroke="black"
+                                            stroke-width="2"
+                                            vector-effect="non-scaling-stroke"
+                                        ></path>
+                                    </mask>
+                                    <path
+                                        node_ref=el
+                                        d=path
+                                        fill=*color
+                                        fill-opacity=0.6
+                                        stroke=*color
+                                        stroke-width="2"
+                                        vector-effect="non-scaling-stroke"
+                                        mask=move || {
+                                            if is_hovered.get() {
+                                                "none".to_string()
+                                            } else {
+                                                format!("url(#cut-path-{})", i)
+                                            }
+                                        }
+                                    ></path>
+                                    <Show when=move || is_hovered.get() fallback=|| ()>
+                                        <text
+                                            font-size="15px"
+                                            vector-effect="non-scaling-stroke"
+                                            x=label_x
+                                            y=label_y
                                         >
-                                            {value}
-                                        </tspan>
-                                    </text>
-                            </Show>
-                        </g>
-                    </svg>
-                    }}).collect_view()}
+                                            <tspan
+                                                text-anchor="middle"
+                                                dominant-baseline="middle"
+                                                color="#000"
+                                            >
+                                                {value}
+                                            </tspan>
+                                        </text>
+                                    </Show>
+                                </g>
+                            </svg>
+                        }
+                    })
+                    .collect_view()
+            }}
         </svg>
     }
 }

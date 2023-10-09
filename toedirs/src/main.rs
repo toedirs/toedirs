@@ -52,7 +52,7 @@ async fn leptos_routes_handler(
             provide_context(auth_session.clone());
             provide_context(app_state.pool.clone());
         },
-        || view! {<App/> },
+        || view! { <App/> },
     );
     handler(req).await.into_response()
 }
