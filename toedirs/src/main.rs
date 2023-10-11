@@ -26,8 +26,6 @@ async fn server_fn_handler(
     raw_query: RawQuery,
     request: Request<AxumBody>,
 ) -> impl IntoResponse {
-    log!("{:?}", path);
-
     handle_server_fns_with_context(
         path,
         headers,

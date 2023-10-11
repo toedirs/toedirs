@@ -82,24 +82,25 @@ fn nice_ticks(min: f64, max: f64, max_ticks: u8) -> TickSpacing {
 
 #[component]
 pub fn BarChart<T>(
-    values: ReadSignal<Vec<T>>,
+    values: MaybeSignal<Vec<T>>,
     options: ChartOptions,
-    // colors: Option<&'chart [&'chart str]>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView
 where
     T: ToPrimitive + Clone + PartialOrd + 'static,
 {
-    let num_bars = create_memo(move |_| values.get().len() as f64);
+    let vals = values.clone();
+    let num_bars = create_memo(move |_| vals.get().len() as f64);
+    let vals = values.clone();
     let max = create_memo(move |_| {
-        values
-            .get()
+        vals.get()
             .iter()
             .map(|v| v.to_f64().unwrap())
             .fold(f64::NEG_INFINITY, f64::max)
     });
+    let vals = values.clone();
     let min = create_memo(move |_| {
-        let min = values
+        let min = vals
             .get()
             .iter()
             .map(|v| v.to_f64().unwrap())
@@ -110,9 +111,9 @@ where
             0.0
         }
     });
+    let vals = values.clone();
     let values = create_memo(move |_| {
-        values
-            .get()
+        vals.get()
             .into_iter()
             .map(|v| v.to_f64().unwrap())
             .zip(CATPPUCCIN_COLORS.into_iter().cycle())
@@ -122,7 +123,6 @@ where
     let tick_config = create_memo(move |_| nice_ticks(min.get(), max.get(), options.max_ticks));
     let ticks = create_memo(move |_| {
         let ticks = tick_config.get();
-        leptos::logging::log!("{:?}", ticks);
         (0..ticks.num_ticks)
             .map(|i| ticks.min_point + i as f64 * ticks.spacing)
             .map(move |tick| {
@@ -245,7 +245,7 @@ where
 
 #[component]
 pub fn PieChart<T>(
-    values: ReadSignal<Vec<T>>,
+    values: MaybeSignal<Vec<T>>,
     options: ChartOptions,
     // colors: Option<&'chart [&'chart str]>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,

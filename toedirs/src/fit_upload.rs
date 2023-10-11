@@ -116,7 +116,6 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
     } else {
         bail!("No activity found in fit file, may be corrupt");
     };
-    // leptos::logging::log!("Parsed records: {:?}", records);
     Ok(())
 }
 

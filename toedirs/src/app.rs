@@ -122,7 +122,7 @@ pub fn App() -> impl IntoView {
                 <div class="container">
                     // <BarChart values=test options=options attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
                     <BarChart
-                        values=test
+                        values=test.into()
                         options=options
                         attr:style="margin-top:5px"
                         attr:preserveAspectRatio="none"

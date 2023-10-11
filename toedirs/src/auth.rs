@@ -211,7 +211,6 @@ pub async fn signup(
 #[server(Logout, "/api")]
 pub async fn logout() -> Result<(), ServerFnError> {
     let auth = auth()?;
-    leptos::logging::log!("Logging out");
     auth.logout_user();
     leptos_axum::redirect("/");
 

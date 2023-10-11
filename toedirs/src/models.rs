@@ -339,7 +339,6 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
             _ => return Err(ModelError::ParseError("Not a Lap".to_string())),
         };
         let fields = value.fields();
-        leptos::logging::log!("fields: {:?}",fields);
         let start_time =
             fields
                 .iter()
