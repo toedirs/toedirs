@@ -46,7 +46,9 @@ pub fn App() -> impl IntoView {
     );
     provide_meta_context();
     // let test: Vec<f64> = vec![2.0, 3.0, 1.5, 7.0, 1.0, 2.5, 9.9];
-    let test: Vec<u8> = vec![2, 3, 1, 7, 1, 2, 9];
+    // let test: Vec<u8> = vec![2, 3, 1, 7, 1, 2, 9];
+    // let test: Vec<u8> = vec![10, 2, 3];
+    let test: Vec<u8> = vec![10];
     // let test2: Vec<f64> = vec![
     //     7.0, 11.0, 2.0, 5.0, 5.0, 9.0, 3.0, 5.0, 11.0, 5.0, 3.0, 5.0, 7.0, 8.0, 6.0, 4.0, 1.0, 6.0,
     //     1.0,
@@ -121,7 +123,7 @@ pub fn App() -> impl IntoView {
             <main>
                 <div class="container">
                     // <BarChart values=test options=options attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
-                    <BarChart
+                    <PieChart
                         values=test.into()
                         options=options
                         attr:style="margin-top:5px"
