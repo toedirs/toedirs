@@ -1,4 +1,5 @@
 use cfg_if::cfg_if;
+pub mod activity_list;
 pub mod app;
 pub mod auth;
 pub mod config;

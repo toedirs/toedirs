@@ -1,10 +1,10 @@
 use crate::{
+    activity_list::ActivityList,
     auth::*,
     error_template::{AppError, ErrorTemplate},
     fit_upload::FitUploadForm,
 };
 use leptos::*;
-use leptos_charts::*;
 use leptos_meta::*;
 use leptos_router::*;
 
@@ -45,17 +45,6 @@ pub fn App() -> impl IntoView {
         },
     );
     provide_meta_context();
-    // let test: Vec<f64> = vec![2.0, 3.0, 1.5, 7.0, 1.0, 2.5, 9.9];
-    // let test: Vec<u8> = vec![2, 3, 1, 7, 1, 2, 9];
-    // let test: Vec<u8> = vec![10, 2, 3];
-    let test: Vec<u8> = vec![10];
-    // let test2: Vec<f64> = vec![
-    //     7.0, 11.0, 2.0, 5.0, 5.0, 9.0, 3.0, 5.0, 11.0, 5.0, 3.0, 5.0, 7.0, 8.0, 6.0, 4.0, 1.0, 6.0,
-    //     1.0,
-    // ];
-    let test2: Vec<u8> = vec![7, 11, 2, 5, 5, 9, 3, 5, 11, 5, 3, 5, 7, 8, 6, 4, 1, 6, 1];
-    let (test, set_test) = create_signal(test);
-    let options = ChartOptions { max_ticks: 4 };
     view! {
         <Stylesheet id="leptos" href="/pkg/toedirs.css"/>
 
@@ -122,16 +111,6 @@ pub fn App() -> impl IntoView {
             </nav>
             <main>
                 <div class="container">
-                    // <BarChart values=test options=options attr:style="margin-top:5px" attr:preserveAspectRatio="none" attr:width="300" attr:height="200" />
-                    <PieChart
-                        values=test.into()
-                        options=options
-                        attr:style="margin-top:5px"
-                        attr:preserveAspectRatio="none"
-                        attr:width="300"
-                        attr:height="200"
-                    />
-                    <button on:click=move |_| set_test(test2.clone())>"Change"</button>
                     <Routes>
                         <Route
                             path="/"
@@ -142,6 +121,20 @@ pub fn App() -> impl IntoView {
                                         fallback=move || view! { <Home/> }
                                     >
                                         <Overview/>
+                                    </ProtectedContentWrapper>
+                                }
+                            }
+                        />
+
+                        <Route
+                            path="/activities"
+                            view=move || {
+                                view! {
+                                    <ProtectedContentWrapper
+                                        when=user
+                                        fallback=move || view! { <Home/> }
+                                    >
+                                        <ActivityList/>
                                     </ProtectedContentWrapper>
                                 }
                             }
