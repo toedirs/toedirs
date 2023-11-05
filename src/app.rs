@@ -57,95 +57,76 @@ pub fn App() -> impl IntoView {
             outside_errors.insert_with_default_key(AppError::NotFound);
             view! { <ErrorTemplate outside_errors/> }.into_view()
         }>
-            <nav class="teal lighten-2">
-                <div class="nav-wrapper">
-                    <a href="#" class="brand-logo">
-                        Toedi
-                    </a>
-                    <ul id="nav-mobile" class="right hide-on-med-and-down">
-                        <ProtectedContentWrapper
-                            when=user
-                            fallback=move || {
-                                view! {
-                                    <li>
-                                        <A href="/login">Login</A>
-                                    </li>
-                                    <li>
-                                        <A href="/signup">Signup</A>
-                                    </li>
-                                }
-                            }
-                        >
+            <Routes>
+                <ProtectedRoute
+                    path="/landing"
+                    redirect_path="/"
+                    condition=move || user.with(|b| !b.unwrap_or(false))
+                    view=Home
+                >
+                    <Route path="/signup" view=move || view! { <Signup action=signup/> }/>
+                    <Route path="/login" view=move || view! { <Login action=login/> }/>
+                    <Route path="" view=Landing/>
+                </ProtectedRoute>
+                <ProtectedRoute
+                    path="/"
+                    redirect_path="/landing"
+                    condition=move || user.with(|b| b.unwrap_or(false))
+                    view=move || {
+                        view! {
+                            <nav class="teal lighten-2">
+                                <div class="nav-wrapper">
+                                    <a href="#" class="brand-logo">
+                                        Toedi
+                                    </a>
+                                    <ul id="nav-mobile" class="right hide-on-med-and-down">
+                                        <li>
 
-                            <li>
+                                            <A href="/" class="">
+                                                Overview
+                                            </A>
+                                        </li>
+                                        <li>
 
-                                <A href="/" class="">
-                                    Overview
-                                </A>
-                            </li>
-                            <li>
+                                            <A href="/activities" class="">
+                                                Activities
+                                            </A>
+                                        </li>
+                                        <li>
+                                            <a
+                                                class="waves-effect waves-light btn"
+                                                on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
+                                            >
+                                                Upload
+                                                <i class="material-symbols-rounded right">upload</i>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <ActionForm action=logout>
+                                                <button type="submit" class="btn-flat waves-effect">
+                                                    "Log Out"
+                                                </button>
+                                            </ActionForm>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </nav>
+                            <main>
+                                <div class="container">
+                                    <Outlet/>
+                                    <FitUploadForm show=show_upload show_set=set_show_upload/>
+                                </div>
+                            </main>
+                        }
+                    }
+                >
 
-                                <A href="/activities" class="">
-                                    Activities
-                                </A>
-                            </li>
-                            <li>
-                                <a
-                                    class="waves-effect waves-light btn"
-                                    on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
-                                >
-                                    Upload
-                                    <i class="material-symbols-rounded right">upload</i>
-                                </a>
-                            </li>
-                            <li>
-                                <ActionForm action=logout>
-                                    <button type="submit" class="btn-flat waves-effect">
-                                        "Log Out"
-                                    </button>
-                                </ActionForm>
-                            </li>
-                        </ProtectedContentWrapper>
-                    </ul>
-                </div>
-            </nav>
-            <main>
-                <div class="container">
-                    <Routes>
-                        <Route
-                            path="/"
-                            view=move || {
-                                view! {
-                                    <ProtectedContentWrapper
-                                        when=user
-                                        fallback=move || view! { <Home/> }
-                                    >
-                                        <Overview/>
-                                    </ProtectedContentWrapper>
-                                }
-                            }
-                        />
+                    <Route path="" view=Overview/>
 
-                        <Route
-                            path="/activities"
-                            view=move || {
-                                view! {
-                                    <ProtectedContentWrapper
-                                        when=user
-                                        fallback=move || view! { <Home/> }
-                                    >
-                                        <ActivityList/>
-                                    </ProtectedContentWrapper>
-                                }
-                            }
-                        />
+                    <Route path="/activities" view=ActivityList/>
 
-                        <Route path="/login" view=move || view! { <Login action=login/> }/>
-                        <Route path="/signup" view=move || view! { <Signup action=signup/> }/>
-                    </Routes>
-                    <FitUploadForm show=show_upload show_set=set_show_upload/>
-                </div>
-            </main>
+                </ProtectedRoute>
+            </Routes>
         </Router>
     }
 }
@@ -208,7 +189,7 @@ fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
                     <button type="submit" class="btn waves-effect waves-light">
                         "Log In"
                     </button>
-                    <A href="/signup" class="waves-effect waves-light grey-darken-2 btn">
+                    <A href="/landing/signup" class="waves-effect waves-light grey-darken-2 btn">
                         Signup
                     </A>
                 </div>
@@ -269,7 +250,7 @@ fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
                     <button type="submit" class="btn waves-effect waves-light">
                         "Sign Up"
                     </button>
-                    <A href="/login" class="btn waves-effect waves-light grey-darken-2">
+                    <A href="/landing/login" class="btn waves-effect waves-light grey-darken-2">
                         Login
                     </A>
                 </div>
@@ -280,6 +261,35 @@ fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
 
 #[component]
 pub fn Home() -> impl IntoView {
+    view! {
+        <nav class="teal lighten-2">
+            <div class="nav-wrapper">
+                <a href="#" class="brand-logo">
+                    Toedi
+                </a>
+                <ul id="nav-mobile" class="right hide-on-med-and-down">
+                    <li>
+                        <A href="/landing/login" exact=true>
+                            Login
+                        </A>
+                    </li>
+                    <li>
+                        <A href="/landing/signup" exact=true>
+                            Signup
+                        </A>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        <main>
+            <div class="container">
+                <Outlet/>
+            </div>
+        </main>
+    }
+}
+#[component]
+fn Landing() -> impl IntoView {
     view! {
         <div class="row">
             <div class="col s12">
@@ -318,31 +328,5 @@ pub fn Home() -> impl IntoView {
                 </div>
             </div>
         </div>
-    }
-}
-
-#[component]
-pub fn ProtectedContentWrapper<F, IV, T>(
-    fallback: F,
-    children: ChildrenFn,
-    when: Resource<T, bool>,
-) -> impl IntoView
-where
-    F: Fn() -> IV + 'static,
-    IV: IntoView,
-    T: Clone + 'static,
-{
-    let fallback = store_value(fallback);
-    let children = store_value(children);
-
-    view! {
-        <Suspense fallback=|| ()>
-            <Show
-                when=move || when.get().unwrap_or(false)
-                fallback=move || fallback.with_value(|fallback| fallback())
-            >
-                {children.with_value(|children| children())}
-            </Show>
-        </Suspense>
     }
 }
