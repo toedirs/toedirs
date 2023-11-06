@@ -31,7 +31,7 @@ pub fn App() -> impl IntoView {
     let login = create_server_action::<Login>();
     let logout = create_server_action::<Logout>();
     let signup = create_server_action::<Signup>();
-    let user = create_resource(
+    let user = create_blocking_resource(
         move || {
             (
                 login.version().get(),
@@ -58,65 +58,85 @@ pub fn App() -> impl IntoView {
             view! { <ErrorTemplate outside_errors/> }.into_view()
         }>
             <Routes>
-                <ProtectedRoute
-                    path="/landing"
-                    redirect_path="/"
-                    condition=move || user.with(|b| !b.unwrap_or(false))
-                    view=Home
+                <Route
+                    path="/home"
+                    view=move|| {
+                        view! {
+                            <Suspense fallback=|| ()>
+                                {move || match user.get() {
+                                    Some(false) => view! { <Home/> }.into_view(),
+                                    Some(true) => view! { <Redirect path="/"/> }.into_view(),
+                                    None => ().into_view(),
+                                }}
+
+                            </Suspense>
+                        }
+                    }
                 >
+
                     <Route path="/signup" view=move || view! { <Signup action=signup/> }/>
                     <Route path="/login" view=move || view! { <Login action=login/> }/>
                     <Route path="" view=Landing/>
-                </ProtectedRoute>
-                <ProtectedRoute
+                </Route>
+                <Route
                     path="/"
-                    redirect_path="/landing"
-                    condition=move || user.with(|b| b.unwrap_or(false))
-                    view=move || {
+                    view=move|| {
                         view! {
-                            <nav class="teal lighten-2">
-                                <div class="nav-wrapper">
-                                    <a href="#" class="brand-logo">
-                                        Toedi
-                                    </a>
-                                    <ul id="nav-mobile" class="right hide-on-med-and-down">
-                                        <li>
+                            <Suspense fallback=|| ()>
+                                {move || match user.get() {
+                                    Some(true) => {
+                                        view! {
+                                            <nav class="teal lighten-2">
+                                                <div class="nav-wrapper">
+                                                    <a href="#" class="brand-logo">
+                                                        Toedi
+                                                    </a>
+                                                    <ul id="nav-mobile" class="right hide-on-med-and-down">
+                                                        <li>
 
-                                            <A href="/" class="">
-                                                Overview
-                                            </A>
-                                        </li>
-                                        <li>
+                                                            <A href="/" class="">
+                                                                Overview
+                                                            </A>
+                                                        </li>
+                                                        <li>
 
-                                            <A href="/activities" class="">
-                                                Activities
-                                            </A>
-                                        </li>
-                                        <li>
-                                            <a
-                                                class="waves-effect waves-light btn"
-                                                on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
-                                            >
-                                                Upload
-                                                <i class="material-symbols-rounded right">upload</i>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <ActionForm action=logout>
-                                                <button type="submit" class="btn-flat waves-effect">
-                                                    "Log Out"
-                                                </button>
-                                            </ActionForm>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </nav>
-                            <main>
-                                <div class="container">
-                                    <Outlet/>
-                                    <FitUploadForm show=show_upload show_set=set_show_upload/>
-                                </div>
-                            </main>
+                                                            <A href="/activities" class="">
+                                                                Activities
+                                                            </A>
+                                                        </li>
+                                                        <li>
+                                                            <a
+                                                                class="waves-effect waves-light btn"
+                                                                on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
+                                                            >
+                                                                Upload
+                                                                <i class="material-symbols-rounded right">upload</i>
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <ActionForm action=logout>
+                                                                <button type="submit" class="btn-flat waves-effect">
+                                                                    "Log Out"
+                                                                </button>
+                                                            </ActionForm>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </nav>
+                                            <main>
+                                                <div class="container">
+                                                    <Outlet/>
+                                                    <FitUploadForm show=show_upload show_set=set_show_upload/>
+                                                </div>
+                                            </main>
+                                        }
+                                            .into_view()
+                                    }
+                                    Some(false) => view! { <Redirect path="/home"/> }.into_view(),
+                                    None => ().into_view(),
+                                }}
+
+                            </Suspense>
                         }
                     }
                 >
@@ -125,7 +145,7 @@ pub fn App() -> impl IntoView {
 
                     <Route path="/activities" view=ActivityList/>
 
-                </ProtectedRoute>
+                </Route>
             </Routes>
         </Router>
     }
@@ -189,7 +209,7 @@ fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
                     <button type="submit" class="btn waves-effect waves-light">
                         "Log In"
                     </button>
-                    <A href="/landing/signup" class="waves-effect waves-light grey-darken-2 btn">
+                    <A href="/home/signup" class="waves-effect waves-light grey-darken-2 btn">
                         Signup
                     </A>
                 </div>
@@ -250,7 +270,7 @@ fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
                     <button type="submit" class="btn waves-effect waves-light">
                         "Sign Up"
                     </button>
-                    <A href="/landing/login" class="btn waves-effect waves-light grey-darken-2">
+                    <A href="/home/login" class="btn waves-effect waves-light grey-darken-2">
                         Login
                     </A>
                 </div>
@@ -269,12 +289,12 @@ pub fn Home() -> impl IntoView {
                 </a>
                 <ul id="nav-mobile" class="right hide-on-med-and-down">
                     <li>
-                        <A href="/landing/login" exact=true>
+                        <A href="/home/login" exact=true>
                             Login
                         </A>
                     </li>
                     <li>
-                        <A href="/landing/signup" exact=true>
+                        <A href="/home/signup" exact=true>
                             Signup
                         </A>
                     </li>
