@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS user_permissions (
 CREATE TABLE IF NOT EXISTS activities  (
     id BIGSERIAL PRIMARY KEY,
     user_id integer NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    timestamp timestamp with time zone NOT NULL,
+    start_time timestamp with time zone NOT NULL,
+    end_time timestamp with time zone NOT NULL,
     duration NUMERIC(8,1) NOT NULL
 );
 

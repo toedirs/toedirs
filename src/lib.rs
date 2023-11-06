@@ -6,6 +6,7 @@ pub mod config;
 pub mod error_template;
 pub mod fileserv;
 pub mod fit_upload;
+pub mod heartrate_summary_chart;
 pub mod models;
 pub mod state;
 

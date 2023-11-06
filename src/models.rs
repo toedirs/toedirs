@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Duration};
 use fitparser::{profile::MesgNum, FitDataRecord, Value};
 #[cfg(feature = "ssr")]
 use itertools::Itertools;
@@ -493,7 +493,8 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Lap> {
 #[derive(Debug, Clone)]
 pub struct Activity {
     pub user_id: Option<i64>,
-    pub timestamp: DateTime<Local>,
+    pub start_time: DateTime<Local>,
+    pub end_time:DateTime<Local>,
     pub duration: f64,
 }
 impl TryFrom<FitDataRecord> for DatabaseEntry<New, Activity> {
@@ -536,7 +537,8 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Activity> {
         Ok(DatabaseEntry {
             state: Box::new(Activity {
                 user_id: None,
-                timestamp,
+                start_time:timestamp,
+                end_time:timestamp + Duration::seconds(duration as i64),
                 duration,
             }),
             extra: New,
@@ -556,13 +558,14 @@ pub async fn insert_activity(
 ) -> Result<DatabaseEntry<Stored, Activity>, ModelError> {
     let result = query(
         r#"
-        INSERT INTO activities (user_id, timestamp, duration)
-        VALUES ($1, $2, $3)
+        INSERT INTO activities (user_id, start_time, end_time, duration)
+        VALUES ($1, $2, $3,$4)
         RETURNING id
         "#,
     )
     .bind(user_id)
-    .bind(activity.state.timestamp)
+    .bind(activity.state.start_time)
+    .bind(activity.state.end_time)
     .bind(activity.state.duration)
     .fetch_one(executor)
     .await
@@ -783,3 +786,4 @@ pub async fn insert_laps(
 
     Ok(())
 }
+
