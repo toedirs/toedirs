@@ -3,7 +3,7 @@ use crate::app::{auth, pool};
 use crate::error_template::ErrorTemplate;
 use chrono::{DateTime, Duration, Local};
 use leptos::*;
-use leptos_charts::{PieChart, PieChartOptions};
+use leptos_charts::{Color, Gradient, PieChart, PieChartOptions, Series};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::*;
@@ -80,10 +80,20 @@ pub fn HeartrateSummaryChart() -> impl IntoView {
                                     .into_view()
                             }
                             Ok(zone_summary) => {
-                                let data = vec![zone_summary.zone1.unwrap_or(0),zone_summary.zone2.unwrap_or(0),zone_summary.zone3.unwrap_or(0),zone_summary.zone4.unwrap_or(0)];
-                                let options:Box<PieChartOptions> = Box::new(Default::default());
+                                let data:Series<i64> = vec![
+                                    (zone_summary.zone1.unwrap_or(0),"Zone 1".to_string()),
+                                    (zone_summary.zone2.unwrap_or(0),"Zone 2".to_string()),
+                                    (zone_summary.zone3.unwrap_or(0),"Zone 3".to_string()),
+                                    (zone_summary.zone4.unwrap_or(0),"Zone 4".to_string())
+                                ].into();
+                                let options: Box<PieChartOptions> = Box::new(PieChartOptions { color: Box::new(Gradient {from: Color::RGB(0,255,0), to:Color::RGB(255,0,0)}) });
                                 view! {
-                        <PieChart values=data.into() options=options attr:width="100%" attr:height="100%"/>
+                                    <PieChart
+                                        values=data.into()
+                                        options=options
+                                        attr:width="100%"
+                                        attr:height="100%"
+                                    />
                                 }
                                     .into_view()
                             }

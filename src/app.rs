@@ -159,7 +159,10 @@ fn Overview() -> impl IntoView {
         <div class="row">
             <div class="col s12 m6 l4 p-1">
                 <div class="card">
-                <div class="card-content teal white-text"><span class="card-title">Hearrate Zones</span><HeartrateSummaryChart/></div>
+                    <div class="card-content teal white-text">
+                        <span class="card-title">Hearrate Zones</span>
+                        <HeartrateSummaryChart/>
+                    </div>
                 </div>
             </div>
             <div class="col s12 m6 l4 p-1">
