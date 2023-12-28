@@ -41,6 +41,7 @@ chrono = "0.4.31"
 itertools = "0.11.0"
 leptos_charts = { path = "../leptos_charts", version="0.1.0" }
 bigdecimal = { version = "0.3.1", features = ["serde"] }
+
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_charts/hydrate"]
 ssr = [

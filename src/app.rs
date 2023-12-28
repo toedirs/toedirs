@@ -4,6 +4,7 @@ use crate::{
     error_template::{AppError, ErrorTemplate},
     fit_upload::FitUploadForm,
     heartrate_summary_chart::HeartrateSummaryChart,
+    training_load_chart::TrainingLoadChart,
 };
 use leptos::*;
 use leptos_meta::*;
@@ -166,7 +167,12 @@ fn Overview() -> impl IntoView {
                 </div>
             </div>
             <div class="col s12 m6 l4 p-1">
-                <div class="card-panel teal">Training LoadChart</div>
+                <div class="card">
+                    <div class="card-content teal white-text">
+                        <span class="card-title">Training LoadChart</span>
+                        <TrainingLoadChart/>
+                    </div>
+                </div>
             </div>
             <div class="col s12 m6 l4 p-1">
                 <div class="card-panel teal">Fitness & Fatigue</div>

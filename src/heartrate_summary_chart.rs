@@ -80,13 +80,19 @@ pub fn HeartrateSummaryChart() -> impl IntoView {
                                     .into_view()
                             }
                             Ok(zone_summary) => {
-                                let data:Series<i64> = vec![
-                                    (zone_summary.zone1.unwrap_or(0),"Zone 1".to_string()),
-                                    (zone_summary.zone2.unwrap_or(0),"Zone 2".to_string()),
-                                    (zone_summary.zone3.unwrap_or(0),"Zone 3".to_string()),
-                                    (zone_summary.zone4.unwrap_or(0),"Zone 4".to_string())
-                                ].into();
-                                let options: Box<PieChartOptions> = Box::new(PieChartOptions { color: Box::new(Gradient {from: Color::RGB(0,255,0), to:Color::RGB(255,0,0)}) });
+                                let data: Series<i64> = vec![
+                                    (zone_summary.zone1.unwrap_or(0), "Zone 1".to_string()),
+                                    (zone_summary.zone2.unwrap_or(0), "Zone 2".to_string()),
+                                    (zone_summary.zone3.unwrap_or(0), "Zone 3".to_string()),
+                                    (zone_summary.zone4.unwrap_or(0), "Zone 4".to_string())
+                                ]
+                                    .into();
+                                let options: Box<PieChartOptions> = Box::new(PieChartOptions {
+                                    color: Box::new(Gradient {
+                                        from: Color::RGB(0, 255, 0),
+                                        to: Color::RGB(255, 0, 0),
+                                    }),
+                                });
                                 view! {
                                     <PieChart
                                         values=data.into()
