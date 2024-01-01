@@ -1,7 +1,14 @@
 use chrono::{DateTime, Datelike, Duration, IsoWeek, Local, NaiveDate, Weekday};
-use leptos::{html::Div, leptos_dom::logging::console_log, *};
-use leptos_use::{use_infinite_scroll_with_options, UseInfiniteScrollOptions};
+use leptos::{
+    ev::{Event, SubmitEvent},
+    html::Div,
+    leptos_dom::logging::console_log,
+    *,
+};
+use leptos_router::*;
+use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
 use rrule::{RRule, Validated};
+use web_sys::HtmlDivElement;
 
 pub trait WorkoutStep: std::fmt::Debug {}
 #[derive(Debug)]
@@ -121,26 +128,41 @@ pub fn WorkoutCalendar() -> impl IntoView {
             let newest =
                 NaiveDate::from_isoywd_opt(newest.year(), newest.week(), Weekday::Mon).unwrap();
             weeks.update(|v| {
-                for wk in (1..2).map(|w| (newest - Duration::weeks(w)).iso_week()) {
-                    v.insert(0, wk);
-                }
+                // for wk in (1..2).map(|w| (newest - Duration::weeks(w)).iso_week()) {
+                //     v.insert(0, wk);
+                // }
                 // *v = v
                 //     .splice(
                 //         0..0,
-                //         (1..9)
+                //         (1..3)
                 //             .rev()
-                //             .map(|w| (newest - Duration::weeks(w)).iso_week()),
+                //             .map(|w| (newest - Duration::weeks(w)).iso_week())
+                //             .collect::<Vec<_>>(),
                 //     )
                 //     .collect()
+                *v = std::iter::once(1)
+                    .rev()
+                    .map(|w| (newest - Duration::weeks(w)).iso_week())
+                    .chain((*v).iter().map(|x| *x))
+                    .collect();
             });
-            // if let Some(el) = calendar_list_el.get() {
-            //     el.set_scroll_top(50);
-            // }
+            if let Some(el) = calendar_list_el.get() {
+                el.set_scroll_top(150);
+            }
         },
         UseInfiniteScrollOptions::default()
             .direction(leptos_use::core::Direction::Top)
             .interval(250.0),
     );
+    create_effect(move |_| {
+        if let Some(d) = calendar_list_el.get() {
+            d.set_scroll_top(1);
+        }
+    });
+    let action_button = create_node_ref::<Div>();
+    let action_is_hovered = use_element_hover(action_button);
+    let show_add_workout = create_rw_signal(false);
+    let show_create_workout = create_rw_signal(false);
     view! {
         <div class="workout-calendar">
             <div class="calendar-row calendar-header white-text blue darken-1">
@@ -173,6 +195,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
                 </div>
             </div>
             <div class="calendar-container" node_ref=calendar_list_el>
+
                 <div class="calendar-body">
                     <For each=move || weeks.get() key=|i| format!("{:?}", i) let:item>
                         <div class="calendar-row cal-content">
@@ -192,6 +215,143 @@ pub fn WorkoutCalendar() -> impl IntoView {
                     </For>
                 </div>
             </div>
+            <div
+                node_ref=action_button
+                class=move || {
+                    format!(
+                        "fixed-action-btn direction-top {}",
+                        if action_is_hovered.get() { "active" } else { "" },
+                    )
+                }
+            >
+
+                <a class="btn-floating btn-large teal">
+                    <i class="large material-symbols-rounded">add</i>
+                </a>
+                <ul>
+                    <li>
+                        <a
+                            class="btn-floating teal"
+                            style="opacity:1;"
+                            alt="Add workout template"
+                            on:click=move |_| { show_create_workout.set(true) }
+                        >
+                            <i class="material-symbols-rounded">fitness_center</i>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            class="btn-floating teal"
+                            style="opacity:1;"
+                            alt="Add workout entry"
+                            on:click=move |_| { show_add_workout.set(true) }
+                        >
+                            <i class="material-symbols-rounded">event</i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <CreateWorkoutDialog show=show_create_workout/>
+            <AddWorkoutDialog show=show_add_workout/>
         </div>
+    }
+}
+
+#[component]
+pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
+    let on_submit = move |_ev: SubmitEvent| {
+        show.set(false);
+    };
+    view! {
+        <Show when=move || { show() } fallback=|| {}>
+            <div
+                class="modal bottom-sheet"
+                style="z-index: 1003; display: block; opacity: 1; bottom: 0%"
+            >
+                <Form
+                    action="/api/upload_fit_file"
+                    method="POST"
+                    enctype="multipart/form-data".to_string()
+                    on:submit=on_submit
+                >
+                    <div class="modal-content">
+                        <h4 class="black-text">"Create workout"</h4>
+                        <div class="row">
+                            <div class="col s12 input-field">
+                                <input id="name" name="name" type="text"/>
+                                <label for="name">Name</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col s12 input-field">
+                                <select name="workout_type" id="workout_type">
+                                    <option value="" disabled selected>
+                                        Choose workout type
+                                    </option>
+                                    <option value="run">
+                                        <i class="material-symbols-rounded">sprint</i>
+                                        Run
+                                    </option>
+                                    <option value="strength">
+                                        <i class="material-symbols-rounded">fitness_center</i>
+                                        Strength
+                                    </option>
+                                    <option value="cycling">
+                                        <i class="material-symbols-rounded">directions_bike</i>
+                                        Cycling
+                                    </option>
+                                    <option value="hiking">
+                                        <i class="material-symbols-rounded">hiking</i>
+                                        General Endurance
+                                    </option>
+                                    <option value="endurance">
+                                        <i class="material-symbols-rounded">directions_walk</i>
+                                        General Endurance
+                                    </option>
+                                </select>
+                                <label>Type</label>
+                            </div>
+                        </div>
+                    </div>
+                </Form>
+            </div>
+            <div
+                class="modal-overlay"
+                style="z-index: 1002; display: block; opacity: 0.5;"
+                on:click=move |_| { show.set(false) }
+            ></div>
+        </Show>
+    }
+}
+
+#[component]
+pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
+    let on_submit = move |_ev: SubmitEvent| {
+        show.set(false);
+    };
+    view! {
+        <Show when=move || { show() } fallback=|| {}>
+            <div
+                class="modal bottom-sheet"
+                style="z-index: 1003; display: block; opacity: 1; bottom: 0%"
+            >
+                <Form
+                    action="/api/upload_fit_file"
+                    method="POST"
+                    enctype="multipart/form-data".to_string()
+                    on:submit=on_submit
+                >
+                    <div class="modal-content">
+                        <h4 class="black-text">"Add workout to calendar"</h4>
+                        <div class="row"></div>
+                    </div>
+                </Form>
+            </div>
+            <div
+                class="modal-overlay"
+                style="z-index: 1002; display: block; opacity: 0.5;"
+                on:click=move |_| { show.set(false) }
+            ></div>
+        </Show>
     }
 }

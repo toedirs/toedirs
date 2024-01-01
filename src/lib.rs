@@ -3,6 +3,8 @@ pub mod activity_list;
 pub mod app;
 pub mod auth;
 pub mod config;
+pub mod date_picker_dialog;
+pub mod elements;
 pub mod error_template;
 pub mod fileserv;
 pub mod fit_upload;
@@ -11,7 +13,6 @@ pub mod models;
 pub mod state;
 pub mod training_load_chart;
 pub mod workout_schedule;
-pub mod date_picker_dialog;
 
 cfg_if! { if #[cfg(feature = "hydrate")] {
     use leptos::*;

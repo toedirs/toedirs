@@ -123,7 +123,6 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
 pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> impl IntoView {
     let on_submit = move |_ev: SubmitEvent| {
         show_set(false);
-        println!("hidden?")
     };
     leptos::view! {
         <Show when=move || { show() } fallback=|| { }>
