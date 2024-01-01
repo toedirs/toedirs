@@ -5,10 +5,13 @@ use crate::{
     fit_upload::FitUploadForm,
     heartrate_summary_chart::HeartrateSummaryChart,
     training_load_chart::TrainingLoadChart,
+    workout_schedule::WorkoutCalendar,
 };
+use chrono::{Duration, Local, TimeZone};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use thaw::*;
 
 cfg_if::cfg_if! {
 if #[cfg(feature = "ssr")] {
@@ -107,6 +110,12 @@ pub fn App() -> impl IntoView {
                                                             </A>
                                                         </li>
                                                         <li>
+
+                                                            <A href="/calendar" class="">
+                                                                Calendar
+                                                            </A>
+                                                        </li>
+                                                        <li>
                                                             <a
                                                                 class="waves-effect waves-light btn"
                                                                 on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
@@ -126,10 +135,8 @@ pub fn App() -> impl IntoView {
                                                 </div>
                                             </nav>
                                             <main>
-                                                <div class="container">
-                                                    <Outlet/>
-                                                    <FitUploadForm show=show_upload show_set=set_show_upload/>
-                                                </div>
+                                                <Outlet/>
+                                                <FitUploadForm show=show_upload show_set=set_show_upload/>
                                             </main>
                                         }
                                             .into_view()
@@ -146,6 +153,7 @@ pub fn App() -> impl IntoView {
                     <Route path="" view=Overview/>
 
                     <Route path="/activities" view=ActivityList/>
+                    <Route path="/calendar" view=WorkoutCalendar/>
 
                 </Route>
             </Routes>
@@ -156,26 +164,54 @@ pub fn App() -> impl IntoView {
 #[component]
 fn Overview() -> impl IntoView {
     //overview page
+    let from_date = create_rw_signal(Some((Local::now() - Duration::days(120)).date_naive()));
+    let to_date = create_rw_signal(Some(Local::now().date_naive()));
+    let from_memo = create_memo(move |_| {
+        from_date().map(|d| {
+            Local
+                .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap()
+        })
+    });
+    let to_memo = create_memo(move |_| {
+        to_date().map(|d| {
+            Local
+                .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap()
+        })
+    });
     view! {
-        <div class="row">
-            <div class="col s12 m6 l4 p-1">
-                <div class="card">
-                    <div class="card-content teal white-text">
-                        <span class="card-title">Hearrate Zones</span>
-                        <HeartrateSummaryChart/>
-                    </div>
+        <div class="container">
+            <div class="row">
+                <div class="col s6">
+                    <DatePicker value=from_date attr:id="from_date"/>
+                    <label for="from_date">From</label>
+                </div>
+                <div class="col s6">
+                    <DatePicker value=to_date attr:id="to_date"/>
+                    <label for="to_date">To</label>
                 </div>
             </div>
-            <div class="col s12 m6 l4 p-1">
-                <div class="card">
-                    <div class="card-content teal white-text">
-                        <span class="card-title">Training LoadChart</span>
-                        <TrainingLoadChart/>
+            <div class="row">
+                <div class="col s12 m6 l4 p-1">
+                    <div class="card">
+                        <div class="card-content teal white-text">
+                            <span class="card-title">Hearrate Zones</span>
+                            <HeartrateSummaryChart from=from_memo to=to_memo/>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col s12 m6 l4 p-1">
-                <div class="card-panel teal">Fitness & Fatigue</div>
+                <div class="col s12 m6 l4 p-1">
+                    <div class="card">
+                        <div class="card-content teal white-text">
+                            <span class="card-title">Training LoadChart</span>
+                            <TrainingLoadChart from=from_memo to=to_memo/>
+                        </div>
+                    </div>
+                </div>
+                <div class="col s12 m6 l4 p-1">
+                    <div class="card-panel teal">Fitness & Fatigue</div>
+                </div>
             </div>
         </div>
     }

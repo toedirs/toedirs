@@ -10,6 +10,8 @@ pub mod heartrate_summary_chart;
 pub mod models;
 pub mod state;
 pub mod training_load_chart;
+pub mod workout_schedule;
+pub mod date_picker_dialog;
 
 cfg_if! { if #[cfg(feature = "hydrate")] {
     use leptos::*;

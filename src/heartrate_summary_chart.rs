@@ -46,8 +46,8 @@ FROM (
 
 #[server(HeartrateSummaryAction, "/api")]
 pub async fn heartrate_zone_summary_action(
-    from: DateTime<Local>,
-    to: DateTime<Local>,
+    from: Option<DateTime<Local>>,
+    to: Option<DateTime<Local>>,
 ) -> Result<HeartrateSummary, ServerFnError> {
     let auth = auth()?;
     if auth.current_user.is_none() {
@@ -55,15 +55,24 @@ pub async fn heartrate_zone_summary_action(
     }
     let user = auth.current_user.unwrap();
     let pool = pool()?;
-    let summary = heartrate_zone_summary(user.id, from, to, pool).await?;
+    let summary = heartrate_zone_summary(
+        user.id,
+        from.unwrap_or(Local::now() - Duration::days(120)),
+        to.unwrap_or(Local::now()),
+        pool,
+    )
+    .await?;
     Ok(summary)
 }
 
 #[component]
-pub fn HeartrateSummaryChart() -> impl IntoView {
+pub fn HeartrateSummaryChart(
+    #[prop(into)] from: Memo<Option<DateTime<Local>>>,
+    #[prop(into)] to: Memo<Option<DateTime<Local>>>,
+) -> impl IntoView {
     let zone_summary = create_resource(
-        move || (),
-        move |_| heartrate_zone_summary_action(Local::now() - Duration::days(120), Local::now()),
+        move || (from(), to()),
+        move |_| heartrate_zone_summary_action(from(), to()),
     );
 
     view! {
@@ -84,7 +93,7 @@ pub fn HeartrateSummaryChart() -> impl IntoView {
                                     (zone_summary.zone1.unwrap_or(0), "Zone 1".to_string()),
                                     (zone_summary.zone2.unwrap_or(0), "Zone 2".to_string()),
                                     (zone_summary.zone3.unwrap_or(0), "Zone 3".to_string()),
-                                    (zone_summary.zone4.unwrap_or(0), "Zone 4".to_string())
+                                    (zone_summary.zone4.unwrap_or(0), "Zone 4".to_string()),
                                 ]
                                     .into();
                                 let options: Box<PieChartOptions> = Box::new(PieChartOptions {

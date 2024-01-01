@@ -1,3 +1,57 @@
 [aria-current="page"] {
   @extend .active;
 }
+
+.calendar-row {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+
+  &.calendar-header {
+    flex: 0 1 auto;
+  }
+
+  &.cal-content {
+    min-height: 200px;
+
+  }
+
+  .col {
+    border-width: 1px 1px 0 0;
+    border-color: #CCCCCC;
+    border-style: solid;
+  }
+
+  .col:last-child {
+    border-width: 1px 0 0 0;
+  }
+}
+
+.workout-calendar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.calendar-container {
+  flex: 1;
+  overflow: auto;
+}
+
+.calendar-body {
+  overflow-y: scroll;
+}
+
+body {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+nav {
+  flex: 0 1 auto;
+}
+
+main {
+  flex: 1;
+  overflow: auto;
+}

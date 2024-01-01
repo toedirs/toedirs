@@ -31,39 +31,41 @@ pub async fn get_activity_list() -> Result<Vec<ActivityListEntry>, ServerFnError
 pub fn ActivityList() -> impl IntoView {
     let activities = create_resource(move || (), move |_| get_activity_list());
     view! {
-        <Transition fallback=move || view! { <p>"Loading..."</p> }>
-            <ErrorBoundary fallback=|errors| {
-                view! { <ErrorTemplate errors=errors/> }
-            }>
-                {move || {
-                    activities
-                        .get()
-                        .map(move |activities| match activities {
-                            Err(e) => {
-                                view! { <pre class="error">"Error: " {e.to_string()}</pre> }
-                                    .into_view()
-                            }
-                            Ok(activities) => {
-                                view! {
-                                    <ul>
-                                        <For
-                                            each=move || activities.clone()
-                                            key=|e| e.id
-                                            let:activity
-                                        >
-                                            <li>
-                                                {activity.id} ": " {format!("{}", activity.start_time)} " "
-                                                {format!("{}", activity.duration)} s
-                                            </li>
-                                        </For>
-                                    </ul>
+        <div class="container">
+            <Transition fallback=move || view! { <p>"Loading..."</p> }>
+                <ErrorBoundary fallback=|errors| {
+                    view! { <ErrorTemplate errors=errors/> }
+                }>
+                    {move || {
+                        activities
+                            .get()
+                            .map(move |activities| match activities {
+                                Err(e) => {
+                                    view! { <pre class="error">"Error: " {e.to_string()}</pre> }
+                                        .into_view()
                                 }
-                                    .into_view()
-                            }
-                        })
-                }}
+                                Ok(activities) => {
+                                    view! {
+                                        <ul>
+                                            <For
+                                                each=move || activities.clone()
+                                                key=|e| e.id
+                                                let:activity
+                                            >
+                                                <li>
+                                                    {activity.id} ": " {format!("{}", activity.start_time)} " "
+                                                    {format!("{}", activity.duration)} s
+                                                </li>
+                                            </For>
+                                        </ul>
+                                    }
+                                        .into_view()
+                                }
+                            })
+                    }}
 
-            </ErrorBoundary>
-        </Transition>
+                </ErrorBoundary>
+            </Transition>
+        </div>
     }
 }

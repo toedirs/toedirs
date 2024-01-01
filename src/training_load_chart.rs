@@ -2,7 +2,7 @@
 use crate::app::{auth, pool};
 use chrono::{DateTime, Duration, Local};
 use leptos::*;
-use leptos_charts::{BarChart, BarChartOptions, Color, Gradient};
+use leptos_charts::{BarChart, BarChartOptions};
 use serde::{Deserialize, Serialize};
 
 use crate::error_template::ErrorTemplate;
@@ -36,8 +36,8 @@ pub async fn training_load(
 
 #[server(TrainingLoadaction, "/api")]
 pub async fn training_load_action(
-    from: DateTime<Local>,
-    to: DateTime<Local>,
+    from: Option<DateTime<Local>>,
+    to: Option<DateTime<Local>>,
 ) -> Result<Vec<TrainingLoad>, ServerFnError> {
     let auth = auth()?;
     if auth.current_user.is_none() {
@@ -45,15 +45,24 @@ pub async fn training_load_action(
     }
     let user = auth.current_user.unwrap();
     let pool = pool()?;
-    let summary = training_load(user.id, from, to, pool).await?;
+    let summary = training_load(
+        user.id,
+        from.unwrap_or(Local::now() - Duration::days(120)),
+        to.unwrap_or(Local::now()),
+        pool,
+    )
+    .await?;
     Ok(summary)
 }
 
 #[component]
-pub fn TrainingLoadChart() -> impl IntoView {
+pub fn TrainingLoadChart(
+    #[prop(into)] from: Memo<Option<DateTime<Local>>>,
+    #[prop(into)] to: Memo<Option<DateTime<Local>>>,
+) -> impl IntoView {
     let training_load = create_resource(
-        move || (),
-        move |_| training_load_action(Local::now() - Duration::days(120), Local::now()),
+        move || (from(), to()),
+        move |_| training_load_action(from(), to()),
     );
 
     view! {
@@ -70,13 +79,14 @@ pub fn TrainingLoadChart() -> impl IntoView {
                                     .into_view()
                             }
                             Ok(training_load) => {
-                                let data :Vec<_>= training_load.iter().map(|t|t.load).collect();//(t.load, t.date.format("%Y-%m-%d").to_string())).collect();
-
+                                let data: Vec<_> = training_load.iter().map(|t| t.load).collect();
                                 let options: Box<BarChartOptions> = Box::new(BarChartOptions {
-                                    max_ticks:5,
+                                    max_ticks: 5,
                                     ..Default::default()
                                 });
                                 view! {
+                                    // (t.load, t.date.format("%Y-%m-%d").to_string())).collect();
+
                                     <BarChart
                                         values=data.into()
                                         options=options
