@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO records(activity_id, timestamp, heartrate, distance, speed, altitude, latitude, longitude)\n        SELECT *\n        FROM UNNEST($1::bigint[], $2::timestamptz[], $3::smallint[], $4::float8[], $5::float8[], $6::float8[], $7::float8[], $8::float8[])\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray",
+        "Int2Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bc69d2d9af0740848d3ef79b5f5e71b47ecff7393eb64f1a926c036fca99d641"
+}

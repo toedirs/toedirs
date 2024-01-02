@@ -25,7 +25,7 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
   --mount=type=cache,target=/app/target \
   if [ "$PROFILE" = "debug" ]; then \
-    cargo leptos build -vv; \
+    cargo leptos build -vv ; \
   else \
     cargo leptos build --release -vv; \
   fi
@@ -33,20 +33,20 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM rustlang/rust:nightly-bullseye as runner
 ARG PROFILE=debug
 # Copy the server binary to the /app directory
-COPY --from=builder /app/target/server/${PROFILE}/toedirs /app/
+COPY --from=builder /app/target/${PROFILE}/toedirs /app/
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 # Copy Cargo.toml if it’s needed at runtime
 COPY --from=builder /app/Cargo.toml /app/
 WORKDIR /app
 
-RUN if [ "$PROFILE" = "debug" ]; then \
-    wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz; \
-    tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz; \
-    cp cargo-binstall /usr/local/cargo/bin; \
-    cargo binstall cargo-leptos -y; \
-    rustup target add wasm32-unknown-unknown; \
-  fi
+# RUN if [ "$PROFILE" = "debug" ]; then \
+#     wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz; \
+#     tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz; \
+#     cp cargo-binstall /usr/local/cargo/bin; \
+#     cargo binstall cargo-leptos -y; \
+#     rustup target add wasm32-unknown-unknown; \
+#   fi
   
 RUN if [ "$PROFILE" = "debug" ]; then \
     export APP_ENVIRONMENT="develop"; \
@@ -58,6 +58,7 @@ RUN if [ "$PROFILE" = "debug" ]; then \
 ENV RUST_LOG="info"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:8080"
 ENV LEPTOS_SITE_ROOT="site"
+ENV DATABASE_URL=
 EXPOSE 8080
 # Run the server
 CMD ["/app/toedirs"]

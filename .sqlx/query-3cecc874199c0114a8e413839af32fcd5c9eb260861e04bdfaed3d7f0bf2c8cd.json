@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO sessions(activity_id,start_time,end_time,sport,distance,calories,average_heartrate,min_heartrate,max_heartrate,average_power,ascent,descent,average_speed,max_speed)\n        SELECT *\n        FROM UNNEST($1::bigint[], $2::timestamptz[],$3::timestamptz[], $4::varchar[], $5::float8[], $6::int[], $7::smallint[], $8::smallint[], $9::smallint[], $10::int[], $11::int[], $12::int[], $13::float8[], $14::float8[])\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray",
+        "TimestamptzArray",
+        "VarcharArray",
+        "Float8Array",
+        "Int4Array",
+        "Int2Array",
+        "Int2Array",
+        "Int2Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Float8Array",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3cecc874199c0114a8e413839af32fcd5c9eb260861e04bdfaed3d7f0bf2c8cd"
+}
