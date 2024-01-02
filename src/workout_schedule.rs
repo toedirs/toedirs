@@ -10,6 +10,8 @@ use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfinit
 use rrule::{RRule, Validated};
 use web_sys::HtmlDivElement;
 
+use crate::elements::select::Select;
+
 pub trait WorkoutStep: std::fmt::Debug {}
 #[derive(Debug)]
 /// A template for a single workout, e.g. a bicycle ride or a weight session.
@@ -262,11 +264,12 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     let on_submit = move |_ev: SubmitEvent| {
         show.set(false);
     };
+    let select_value = create_rw_signal("".to_string());
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <div
-                class="modal bottom-sheet"
-                style="z-index: 1003; display: block; opacity: 1; bottom: 0%"
+                class="modal"
+                style="z-index: 1003; display: block; opacity: 1; top: 10%;overflow:visible;"
             >
                 <Form
                     action="/api/upload_fit_file"
@@ -274,22 +277,23 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                     enctype="multipart/form-data".to_string()
                     on:submit=on_submit
                 >
-                    <div class="modal-content">
+                    <div class="modal-content" style="overflow:visible;">
                         <h4 class="black-text">"Create workout"</h4>
                         <div class="row">
-                            <div class="col s12 input-field">
+                            <div class="col s6 input-field">
                                 <input id="name" name="name" type="text"/>
                                 <label for="name">Name</label>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col s12 input-field">
-                                <select name="workout_type" id="workout_type">
+                            <div class="col s6 input-field">
+                                // <select name="workout_type" id="workout_type">
+                                <Select value=select_value>
                                     <option value="" disabled selected>
                                         Choose workout type
                                     </option>
                                     <option value="run">
-                                        <i class="material-symbols-rounded">sprint</i>
+                                        <i class="material-symbols-rounded">directions_run</i>
                                         Run
                                     </option>
                                     <option value="strength">
@@ -301,14 +305,15 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                         Cycling
                                     </option>
                                     <option value="hiking">
-                                        <i class="material-symbols-rounded">hiking</i>
+                                        <i class="material-symbols-rounded">directions_walk</i>
                                         General Endurance
                                     </option>
                                     <option value="endurance">
                                         <i class="material-symbols-rounded">directions_walk</i>
-                                        General Endurance
+                                        Hike
                                     </option>
-                                </select>
+                                // </select>
+                                </Select>
                                 <label>Type</label>
                             </div>
                         </div>
