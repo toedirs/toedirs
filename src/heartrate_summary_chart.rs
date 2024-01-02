@@ -53,7 +53,7 @@ pub async fn heartrate_zone_summary_action(
     if auth.current_user.is_none() {
         return Err(ServerFnError::ServerError("Not logged in".to_string()));
     }
-    let user = auth.current_user.unwrap();
+    let user = auth.current_user.expect("the user to be logged in");
     let pool = pool()?;
     let summary = heartrate_zone_summary(
         user.id,
