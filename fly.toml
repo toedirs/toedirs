@@ -8,7 +8,7 @@ primary_region = "cdg"
 
 [build]
 [build.args]
-  PROFILE="release"
+  PROFILE="debug"
 
 [http_service]
   internal_port = 8080
