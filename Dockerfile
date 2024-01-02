@@ -27,17 +27,23 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
   if [ "$PROFILE" = "debug" ]; then \
     cargo leptos build -vv ; \
   else \
-    cargo leptos build --release -vv; \
-  fi
+    cargo leptos build --release -vv ; \
+  fi; \
+  mkdir output;\
+  cp target/${PROFILE}/toedirs output/; \
+  cp -r target/site output/site;
 
 FROM rustlang/rust:nightly-bullseye as runner
+# FROM scratch as runner
 ARG PROFILE=debug
+USER 10001
 # Copy the server binary to the /app directory
-COPY --from=builder /app/target/${PROFILE}/toedirs /app/
+COPY --chown=10001:10001 --from=builder /app/output/toedirs /app/
 # /target/site contains our JS/WASM/CSS, etc.
-COPY --from=builder /app/target/site /app/site
+COPY --chown=10001:10001 --from=builder /app/output/site /app/site
 # Copy Cargo.toml if it’s needed at runtime
-COPY --from=builder /app/Cargo.toml /app/
+COPY --chown=10001:10001 --from=builder /app/Cargo.toml /app/
+COPY --chown=10001:10001 --from=builder /app/toedi.toml /app/
 WORKDIR /app
 
 # RUN if [ "$PROFILE" = "debug" ]; then \
@@ -48,11 +54,11 @@ WORKDIR /app
 #     rustup target add wasm32-unknown-unknown; \
 #   fi
   
-RUN if [ "$PROFILE" = "debug" ]; then \
-    export APP_ENVIRONMENT="develop"; \
-  else \
-    export APP_ENVIRONMENT="production"; \
-  fi
+# RUN if [ "$PROFILE" = "debug" ]; then \
+#     export APP_ENVIRONMENT="develop"; \
+#   else \
+#     export APP_ENVIRONMENT="production"; \
+#   fi
 
 # Set any required env variables and
 ENV RUST_LOG="info"
@@ -61,4 +67,4 @@ ENV LEPTOS_SITE_ROOT="site"
 ENV DATABASE_URL=
 EXPOSE 8080
 # Run the server
-CMD ["/app/toedirs"]
+ENTRYPOINT ["/app/toedirs"]

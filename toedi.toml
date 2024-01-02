@@ -1,6 +1,7 @@
-[db]
-host = "localhost"
-port = 5432
-user = "toedi"
-password = "toedi"
-database = "toedi"
+database_url = "postgres://toedi:toedi@localhost:5432/toedi"
+# [db]
+# host = "localhost"
+# port = 5432
+# user = "toedi"
+# password = "toedi"
+# database = "toedi"

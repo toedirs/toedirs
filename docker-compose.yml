@@ -19,10 +19,11 @@ services:
     # Use "forwardPorts" in **devcontainer.json** to forward an app port locally.
     # (Adding the "ports" property to this file will not forward from a Codespace.)
     environment:
-      DB_USER: toedi
-      DB_NAME: toedi
-      DB_PASSWORD: toedi
-      DB_HOST: db
+      # DB_USER: toedi
+      # DB_NAME: toedi
+      # DB_PASSWORD: toedi
+      # DB_HOST: db
+      DATABASE_URL: postgres://toedi:toedi@localhost:5432/toedi
       PROFILE: debug
     profiles:
       - frontend

@@ -60,20 +60,11 @@ async fn leptos_routes_handler(
 async fn main() {
     Config::load();
     let config = Config::global();
+    log!("connecting to db: {}", config.database_url);
 
     let pool = PgPoolOptions::new()
         .max_connections(50)
-        .connect(
-            format!(
-                "postgresql://{user}:{password}@{host}:{port}/{database}",
-                user = config.db.user,
-                password = config.db.password,
-                host = config.db.host,
-                port = config.db.port,
-                database = config.db.database
-            )
-            .as_str(),
-        )
+        .connect(config.database_url.as_str())
         .await
         .expect("couldn't connect to database");
 
