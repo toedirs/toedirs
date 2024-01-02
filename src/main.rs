@@ -15,6 +15,7 @@ cfg_if! {
 
         use axum_session::{SessionConfig, SessionLayer, SessionStore};
         use axum_session_auth::{AuthSessionLayer, AuthConfig, SessionPgPool};
+        use sentry::integrations::tower::{NewSentryLayer};
     }
 }
 #[cfg(feature = "ssr")]
@@ -102,6 +103,7 @@ async fn main() {
         .route("/api/upload_fit_file", post(upload_fit_file))
         .leptos_routes_with_handler(routes, get(leptos_routes_handler))
         .fallback(file_and_error_handler)
+        .layer(NewSentryLayer::new_from_top())
         .layer(
             AuthSessionLayer::<User, i64, SessionPgPool, PgPool>::new(Some(pool.clone()))
                 .with_config(auth_config),
