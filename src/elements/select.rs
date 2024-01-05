@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use leptos::{html::Input, *};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlOptionElement;
@@ -5,23 +7,43 @@ use web_sys::HtmlOptionElement;
 #[component]
 pub fn Select(value: RwSignal<String>, children: Children) -> impl IntoView {
     let show_dropdown = create_rw_signal(false);
-    let children = children()
+    let display_value = create_rw_signal("");
+    let children: Vec<_> = children()
         .nodes
-        .into_iter()
-        // .filter(|n| {
-        //     n.clone()
-        //         .into_html_element()
-        //         .is_ok_and(|e| e.tag_name() == "option")
-        // })
-        .map(|o| {
-            let el = o.clone();
-            let el = el.into_html_element().unwrap();
+        .iter()
+        .map(|n| {
+            let el = n.clone();
+            let el = el.into_html_element().unwrap().clone();
             let el = el.dyn_ref::<HtmlOptionElement>().unwrap();
+            (
+                el.value(),
+                el.inner_html(),
+                el.get_attribute("disabled").is_some(),
+            )
+        })
+        .collect();
+    let value_map: HashMap<_, _> = children
+        .iter()
+        .map(|(val, inner, _)| (val, inner))
+        .collect();
+    let children = children
+        .into_iter()
+        .map(|(val, inner, disabled)| {
+            let class = format!(
+                "{} {}",
+                if value() == val { "selected" } else { "" },
+                if disabled { "disabled" } else { "" }
+            );
             view! {
-                <li on:click=move |_| {
-                    show_dropdown.set(false);
-                }>
-                    <span inner_html=el.inner_html()></span>
+                <li
+                    class=class
+                    on:click=move |_| {
+                        value.set(val.clone());
+                        show_dropdown.set(false);
+                    }
+                >
+
+                    <span inner_html=inner.clone()></span>
                 </li>
             }
         })
@@ -29,14 +51,18 @@ pub fn Select(value: RwSignal<String>, children: Children) -> impl IntoView {
     let dropdown_ref = create_node_ref::<Input>();
     view! {
         <div class="select-wrapper">
+            <div class="select-dropdown dropdown-trigger">{display_value}</div>
             <input
                 node_ref=dropdown_ref
                 class="select-dropdown dropdown-trigger"
+                style="display:none"
                 type="text"
                 readonly="true"
                 on:click=move |_| {
                     show_dropdown.set(true);
                 }
+
+                value=value
             />
 
             <ul
