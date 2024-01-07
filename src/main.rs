@@ -77,7 +77,7 @@ async fn main() {
             .expect("couldn't create session store");
     migrate!().run(&pool).await.expect("migrations to run");
 
-    simple_logger::init_with_level(log::Level::Info).expect("couldn't initialize logging");
+    simple_logger::init_with_level(log::Level::Warn).expect("couldn't initialize logging");
 
     // Setting get_configuration(None) means we'll be using cargo-leptos's env values
     // For deployment these variables are:

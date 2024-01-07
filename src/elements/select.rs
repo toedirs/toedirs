@@ -51,6 +51,9 @@ pub fn Select(
                 <li
                     class=class
                     on:click=move |_| {
+                        if disabled {
+                            return;
+                        }
                         value.set(val.clone());
                         valmap.get(&val).and_then(|v| Some(display_value.set(v.clone())));
                         show_dropdown.set(false);
@@ -81,7 +84,6 @@ pub fn Select(
                 style="display:none"
                 type="text"
                 readonly="true"
-
                 value=value
             />
 

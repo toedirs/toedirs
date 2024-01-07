@@ -259,24 +259,25 @@ pub fn WorkoutCalendar() -> impl IntoView {
     }
 }
 
+#[server(CreateWorkout, "/api")]
+pub async fn create_workout(name: String, workout_type: String) -> Result<(), ServerFnError> {
+    Ok(())
+}
+
 #[component]
 pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     let on_submit = move |_ev: SubmitEvent| {
         show.set(false);
     };
     let select_value = create_rw_signal("".to_string());
+    let create_workout_action = create_server_action::<CreateWorkout>();
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <div
                 class="modal"
                 style="z-index: 1003; display: block; opacity: 1; top: 10%;overflow:visible;"
             >
-                <Form
-                    action="/api/upload_fit_file"
-                    method="POST"
-                    enctype="multipart/form-data".to_string()
-                    on:submit=on_submit
-                >
+                <ActionForm action=create_workout_action on:submit=on_submit>
                     <div class="modal-content" style="overflow:visible;">
                         <h4 class="black-text">"Create workout"</h4>
                         <div class="row">
@@ -322,7 +323,13 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                             </div>
                         </div>
                     </div>
-                </Form>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn waves-effect waves-light">
+                            <i class="material-symbols-rounded right">save</i>
+                            Create
+                        </button>
+                    </div>
+                </ActionForm>
             </div>
             <div
                 class="modal-overlay"
