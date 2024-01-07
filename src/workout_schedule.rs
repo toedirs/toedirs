@@ -288,7 +288,11 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                         <div class="row">
                             <div class="col s6 input-field">
                                 // <select name="workout_type" id="workout_type">
-                                <Select value=select_value>
+                                <Select
+                                    value=select_value
+                                    name="workout_type"
+                                    attr:id="workout_type"
+                                >
                                     <option value="" disabled selected>
                                         Choose workout type
                                     </option>
@@ -314,7 +318,7 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                     </option>
                                 // </select>
                                 </Select>
-                                <label>Type</label>
+                                <label for="workout_type">Type</label>
                             </div>
                         </div>
                     </div>

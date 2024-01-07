@@ -55,3 +55,27 @@ main {
   flex: 1;
   overflow: auto;
 }
+
+div.select-dropdown.dropdown-trigger {
+  width: 100%;
+  font-size: 16px;
+  height: 100%;
+}
+
+.input-field div.select-wrapper+label {
+  transform: scale(.75);
+  top: 8px;
+}
+
+.input-field div.select-wrapper {
+  box-sizing: border-box;
+  padding: 0 16px;
+  padding-top: 20px;
+  border: none;
+  border-radius: 4px;
+  border-bottom: 1px solid;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  height: 56px;
+  width: 100%;
+}

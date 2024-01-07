@@ -5,9 +5,14 @@ use wasm_bindgen::JsCast;
 use web_sys::HtmlOptionElement;
 
 #[component]
-pub fn Select(value: RwSignal<String>, children: Children) -> impl IntoView {
+pub fn Select(
+    name: &'static str,
+    value: RwSignal<String>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+    children: Children,
+) -> impl IntoView {
     let show_dropdown = create_rw_signal(false);
-    let display_value = create_rw_signal("");
+    let display_value = create_rw_signal("".to_string());
     let children: Vec<_> = children()
         .nodes
         .iter()
@@ -22,9 +27,10 @@ pub fn Select(value: RwSignal<String>, children: Children) -> impl IntoView {
             )
         })
         .collect();
-    let value_map: HashMap<_, _> = children
+    let children_copy = children.clone();
+    let value_map: HashMap<_, _> = children_copy
         .iter()
-        .map(|(val, inner, _)| (val, inner))
+        .map(|(val, inner, _)| (val.clone(), inner.clone()))
         .collect();
     let children = children
         .into_iter()
@@ -34,11 +40,19 @@ pub fn Select(value: RwSignal<String>, children: Children) -> impl IntoView {
                 if value() == val { "selected" } else { "" },
                 if disabled { "disabled" } else { "" }
             );
+            if value() == val {
+                value_map
+                    .clone()
+                    .get(&val)
+                    .and_then(|v| Some(display_value.set(v.clone())));
+            }
+            let valmap = value_map.clone();
             view! {
                 <li
                     class=class
                     on:click=move |_| {
                         value.set(val.clone());
+                        valmap.get(&val).and_then(|v| Some(display_value.set(v.clone())));
                         show_dropdown.set(false);
                     }
                 >
@@ -51,16 +65,22 @@ pub fn Select(value: RwSignal<String>, children: Children) -> impl IntoView {
     let dropdown_ref = create_node_ref::<Input>();
     view! {
         <div class="select-wrapper">
-            <div class="select-dropdown dropdown-trigger">{display_value}</div>
+            <div
+                class="select-dropdown dropdown-trigger input-field valign-wrapper"
+                on:click=move |_| {
+                    show_dropdown.set(true);
+                }
+
+                {..attrs.clone()}
+                inner_html=display_value
+            ></div>
             <input
+                name=name
                 node_ref=dropdown_ref
                 class="select-dropdown dropdown-trigger"
                 style="display:none"
                 type="text"
                 readonly="true"
-                on:click=move |_| {
-                    show_dropdown.set(true);
-                }
 
                 value=value
             />
@@ -84,7 +104,16 @@ pub fn Select(value: RwSignal<String>, children: Children) -> impl IntoView {
 
                 {children}
             </ul>
-            <i class="valign-wrapper material-symbols-rounded caret">expand_more</i>
+            <i
+                class="valign-wrapper material-symbols-rounded caret dropdown-trigger"
+                style="top:auto;"
+                on:click=move |_| {
+                    show_dropdown.set(true);
+                }
+            >
+
+                expand_more
+            </i>
         </div>
     }
 }
