@@ -1,26 +1,30 @@
+use std::iter;
+
+#[cfg(feature = "ssr")]
+use crate::app::{auth, pool};
 use chrono::{DateTime, Datelike, Duration, IsoWeek, Local, NaiveDate, Weekday};
-use leptos::{
-    ev::{Event, SubmitEvent},
-    html::Div,
-    leptos_dom::logging::console_log,
-    *,
-};
+use leptos::{ev::SubmitEvent, html::Div, *};
 use leptos_router::*;
 use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
 use rrule::{RRule, Validated};
-use web_sys::HtmlDivElement;
+use serde::{Deserialize, Serialize};
 
 use crate::elements::select::Select;
 
 pub trait WorkoutStep: std::fmt::Debug {}
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 /// A template for a single workout, e.g. a bicycle ride or a weight session.
 /// Includes all the different steps involved.
 pub struct WorkoutTemplate {
+    /// unique id of the template.
+    pub id: i64,
+    /// user the template belongs to.
+    pub user_id: i32,
     /// The unique name of this workout.
-    pub name: String,
-    /// The steps that make up this workout.
-    pub steps: Vec<Box<dyn WorkoutStep>>,
+    pub template_name: String,
+    /// the type of workout this is.
+    pub workout_type: WorkoutType, // /// The steps that make up this workout.
+                                   // pub steps: Vec<Box<dyn WorkoutStep>>,
 }
 /// A schedule for a workout template.
 /// Defines when the workout happens.
@@ -130,18 +134,6 @@ pub fn WorkoutCalendar() -> impl IntoView {
             let newest =
                 NaiveDate::from_isoywd_opt(newest.year(), newest.week(), Weekday::Mon).unwrap();
             weeks.update(|v| {
-                // for wk in (1..2).map(|w| (newest - Duration::weeks(w)).iso_week()) {
-                //     v.insert(0, wk);
-                // }
-                // *v = v
-                //     .splice(
-                //         0..0,
-                //         (1..3)
-                //             .rev()
-                //             .map(|w| (newest - Duration::weeks(w)).iso_week())
-                //             .collect::<Vec<_>>(),
-                //     )
-                //     .collect()
                 *v = std::iter::once(1)
                     .rev()
                     .map(|w| (newest - Duration::weeks(w)).iso_week())
@@ -259,8 +251,57 @@ pub fn WorkoutCalendar() -> impl IntoView {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type))]
+#[cfg_attr(
+    feature = "ssr",
+    sqlx(type_name = "workout_type", rename_all = "snake_case")
+)]
+pub enum WorkoutType {
+    Run,
+    Strength,
+    Cycling,
+    Hiking,
+    Endurance,
+}
+
+#[cfg(feature = "ssr")]
+impl TryFrom<String> for WorkoutType {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "run" => Ok(Self::Run),
+            "strength" => Ok(Self::Strength),
+            "cycling" => Ok(Self::Cycling),
+            "hiking" => Ok(Self::Hiking),
+            "endurance" => Ok(Self::Endurance),
+            _ => Err("Couldn't parse workout type".to_string()),
+        }
+    }
+}
+
 #[server(CreateWorkout, "/api")]
 pub async fn create_workout(name: String, workout_type: String) -> Result<(), ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
+    sqlx::query!(
+        r#"
+        INSERT INTO workout_templates (user_id, template_name, workout_type)
+        VALUES ($1, $2,$3)
+        "#,
+        user.id as _,
+        name,
+        TryInto::<WorkoutType>::try_into(workout_type)
+            .map_err(|e| ServerFnError::ServerError("Couldn't parse workout type".to_string()))?
+            as _
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::ServerError(format!("Error saving workout template: {}", e)))?;
     Ok(())
 }
 
@@ -288,10 +329,10 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                         </div>
                         <div class="row">
                             <div class="col s6 input-field">
-                                // <select name="workout_type" id="workout_type">
                                 <Select
                                     value=select_value
                                     name="workout_type"
+                                    options=None
                                     attr:id="workout_type"
                                 >
                                     <option value="" disabled selected>
@@ -311,13 +352,12 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                     </option>
                                     <option value="hiking">
                                         <i class="material-symbols-rounded">directions_walk</i>
-                                        General Endurance
+                                        Hike
                                     </option>
                                     <option value="endurance">
                                         <i class="material-symbols-rounded">directions_walk</i>
-                                        Hike
+                                        General Endurance
                                     </option>
-                                // </select>
                                 </Select>
                                 <label for="workout_type">Type</label>
                             </div>
@@ -340,28 +380,117 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     }
 }
 
+#[server(GetWorkoutTemplates, "/api")]
+pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
+    let templates = sqlx::query_as!(
+        WorkoutTemplate,
+        r#"
+        SELECT templates.id,
+            templates.user_id,
+            templates.template_name,
+            templates.workout_type as "workout_type: _" 
+        FROM workout_templates as templates 
+        WHERE templates.user_id = $1::bigint"#,
+        user.id as _
+    )
+    .fetch_all(&pool)
+    .await?;
+    Ok(templates)
+}
+
+#[server(AddWorkout, "/api")]
+pub async fn add_workout(name: String, workout_type: String) -> Result<(), ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
+    sqlx::query!(
+        r#"
+        INSERT INTO workout_templates (user_id, template_name, workout_type)
+        VALUES ($1, $2,$3)
+        "#,
+        user.id as _,
+        name,
+        TryInto::<WorkoutType>::try_into(workout_type)
+            .map_err(|e| ServerFnError::ServerError("Couldn't parse workout type".to_string()))?
+            as _
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::ServerError(format!("Error saving workout template: {}", e)))?;
+    Ok(())
+}
+
 #[component]
 pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     let on_submit = move |_ev: SubmitEvent| {
         show.set(false);
     };
+    let add_workout_action = create_server_action::<AddWorkout>();
+    let workout_templates = create_resource(show, |value| async move {
+        if value {
+            get_workout_templates().await.unwrap_or_default()
+        } else {
+            Vec::new()
+        }
+    });
+    let select_value = create_rw_signal("0".to_string());
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <div
-                class="modal bottom-sheet"
-                style="z-index: 1003; display: block; opacity: 1; bottom: 0%"
+                class="modal"
+                style="z-index: 1003; display: block; opacity: 1; top: 10%;overflow:visible;"
             >
-                <Form
-                    action="/api/upload_fit_file"
-                    method="POST"
-                    enctype="multipart/form-data".to_string()
-                    on:submit=on_submit
-                >
-                    <div class="modal-content">
+                <ActionForm action=add_workout_action on:submit=on_submit>
+                    <div class="modal-content" style="overflow:visible;">
                         <h4 class="black-text">"Add workout to calendar"</h4>
                         <div class="row"></div>
+                        <div class="row">
+                            <Suspense fallback=move || view! { "loading..." }>
+                                <div class="col s6 input-field">
+                                    // <select name="workout_type" id="workout_type">
+                                    {move || {
+                                        workout_templates
+                                            .get()
+                                            .map(|templates| {
+                                                let options = iter::once((
+                                                        "0".to_string(),
+                                                        "Choose workout template".to_string(),
+                                                        true,
+                                                    ))
+                                                    .chain(
+                                                        templates
+                                                            .iter()
+                                                            .map(|t| {
+                                                                (format!("{}", t.id), t.template_name.clone(), false)
+                                                            }),
+                                                    )
+                                                    .collect::<Vec<_>>();
+                                                view! {
+                                                    <Select
+                                                        value=select_value
+                                                        name="workout_type"
+                                                        options=Some(options)
+                                                        attr:id="workout_type"
+                                                    >
+
+                                                        {}
+                                                    </Select>
+                                                }
+                                            })
+                                    }}
+
+                                </div>
+                            </Suspense>
+                        </div>
                     </div>
-                </Form>
+                </ActionForm>
             </div>
             <div
                 class="modal-overlay"

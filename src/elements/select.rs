@@ -8,25 +8,30 @@ use web_sys::HtmlOptionElement;
 pub fn Select(
     name: &'static str,
     value: RwSignal<String>,
+    options: Option<Vec<(String, String, bool)>>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
     children: Children,
 ) -> impl IntoView {
     let show_dropdown = create_rw_signal(false);
     let display_value = create_rw_signal("".to_string());
-    let children: Vec<_> = children()
-        .nodes
-        .iter()
-        .map(|n| {
-            let el = n.clone();
-            let el = el.into_html_element().unwrap().clone();
-            let el = el.dyn_ref::<HtmlOptionElement>().unwrap();
-            (
-                el.value(),
-                el.inner_html(),
-                el.get_attribute("disabled").is_some(),
-            )
-        })
-        .collect();
+    let children: Vec<_> = if let Some(children) = options {
+        children
+    } else {
+        children()
+            .nodes
+            .iter()
+            .map(|n| {
+                let el = n.clone();
+                let el = el.into_html_element().unwrap().clone();
+                let el = el.dyn_ref::<HtmlOptionElement>().unwrap();
+                (
+                    el.value(),
+                    el.inner_html(),
+                    el.get_attribute("disabled").is_some(),
+                )
+            })
+            .collect()
+    };
     let children_copy = children.clone();
     let value_map: HashMap<_, _> = children_copy
         .iter()
