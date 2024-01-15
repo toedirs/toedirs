@@ -3,28 +3,28 @@
 ***************/
 .table-of-contents {
   &.fixed {
-    position: fixed;
-  }
+      position: fixed;
+    }
 
   li {
-    padding: 0;
+    padding: 2px 0;
   }
-
   a {
     display: inline-block;
-    font-weight: 400;
-    color: $font-color-medium;
+    font-weight: 300;
+    color: #757575;
     padding-left: 16px;
-    height: 2rem;
-    line-height: 2rem;
-    border-left: 1px solid $divider-color;
-    
+    height: 1.5rem;
+    line-height: 1.5rem;
+    letter-spacing: .4;
+    display: inline-block;
+
     &:hover {
-      color: $font-color-main;
+      color: lighten(#757575, 20%);
       padding-left: 15px;
+      border-left: 1px solid $primary-color;
     }
     &.active {
-      color: $primary-color;
       font-weight: 500;
       padding-left: 14px;
       border-left: 2px solid $primary-color;

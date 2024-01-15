@@ -2,14 +2,14 @@
   &:focus {
     outline: none;
     background-color: $chip-selected-color;
-    color: $chip-selected-font-color;
+    color: #fff;
   }
 
   display: inline-block;
   height: 32px;
   font-size: 13px;
   font-weight: 500;
-  color: $chip-font-color;
+  color: rgba(0,0,0,.6);
   line-height: 32px;
   padding: 0 12px;
   border-radius: 16px;
@@ -52,23 +52,23 @@
     cursor: text;
   }
 
-  input:not([type]):not(.browser-default).input {
+  .input {
     background: none;
     border: 0;
-    color: $input-color;
+    color: rgba(0,0,0,.6);
     display: inline-block;
     font-size: $input-font-size;
     height: $input-height;
     line-height: 32px;
     outline: 0;
     margin: 0;
-    padding: 0;
-    width: 120px;
+    padding: 0 !important;
+    width: 120px !important;
+  }
 
-    &:focus {
-      border: 0;
-      box-shadow: none;
-    }
+  .input:focus {
+    border: 0 !important;
+    box-shadow: none !important;
   }
 
   // Autocomplete
@@ -81,12 +81,6 @@
 // Form prefix
 .prefix ~ .chips {
   margin-left: 3rem;
-  width: 92%;
-  width: calc(100% - 3rem);
-}
-// Form suffix
-.suffix ~ .chips {
-  margin-right: 3rem;
   width: 92%;
   width: calc(100% - 3rem);
 }

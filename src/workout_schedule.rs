@@ -515,7 +515,9 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col s2 input-field valign-wrapper">"Repeat"</div>
+                            <div class="col s2 input-field valign-wrapper">
+                                <span>"Repeat"</span>
+                            </div>
                             <div class="col s2 input-field">
                                 <Select
                                     value=repetition_type
@@ -555,7 +557,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                         </div>
                         <div class="row">
                             <div class="col s6 input-field">
-                                <p>
+                                "End" <p>
                                     <label>
                                         <input
                                             name="end"
@@ -567,8 +569,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                             "After" <InputNumber value=occurences step=1/> "occurences"
                                         </span>
                                     </label>
-                                </p>
-                                <p>
+                                </p> <p>
                                     <label>
                                         <input
                                             name="end"

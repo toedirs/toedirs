@@ -7,14 +7,14 @@ span.badge {
   font-size: 1rem;
   line-height: $badge-height;
   height: $badge-height;
-  color: $badge-color;
+  color: color('grey', 'darken-1');
   float: right;
   box-sizing: border-box;
 
   &.new {
     font-weight: 300;
     font-size: 0.8rem;
-    color: $badge-color-new;
+    color: #fff;
     background-color: $badge-bg-color;
     border-radius: 2px;
   }
@@ -25,10 +25,6 @@ span.badge {
   &[data-badge-caption]::after {
     content: " " attr(data-badge-caption);
   }
-}
-
-.active span.badge {
-  color: $badge-color-active;
 }
 
 // Special cases
@@ -43,19 +39,13 @@ nav ul a span.badge {
 
 // Line height centering
 .collection-item span.badge {
-  margin-top: calc(#{$collection-line-height * 0.5} - #{$badge-height * 0.5});
+  margin-top: calc(#{$collection-line-height / 2} - #{$badge-height / 2});
 }
-
 .collapsible span.badge {
   margin-left: auto;
 }
-
-.collapsible .active span.badge:not(.new) {
-  color: $badge-color;
-}
-
 .sidenav span.badge {
-  margin-top: calc(#{$sidenav-line-height * 0.5} - #{$badge-height * 0.5});
+  margin-top: calc(#{$sidenav-line-height / 2} - #{$badge-height / 2});
 }
 
 table span.badge {

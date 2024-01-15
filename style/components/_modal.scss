@@ -9,7 +9,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  background-color: $modal-background-color;
+  background-color: #fafafa;
   padding: 0;
   max-height: 70%;
   width: 55%;
@@ -20,7 +20,7 @@
   will-change: top, opacity;
 
   @media #{$medium-and-down} {
-    width: 80%;
+   width: 80%;
   }
 
   h1,h2,h3,h4 {
@@ -29,16 +29,14 @@
 
   .modal-content {
     padding: 24px;
-    overflow-y: hidden;
   }
-
   .modal-close {
     cursor: pointer;
   }
 
   .modal-footer {
     border-radius: 0 0 2px 2px;
-    background-color: $modal-background-color;
+    background-color: #fafafa;
     padding: 4px 6px;
     height: 56px;
     width: 100%;
@@ -49,7 +47,6 @@
     }
   }
 }
-
 .modal-overlay {
   position: fixed;
   z-index: 999;
@@ -79,7 +76,7 @@
   }
 
   .modal-footer {
-    border-top: 1px solid $divider-color;
+    border-top: 1px solid rgba(0,0,0,.1);
     position: absolute;
     bottom: 0;
   }

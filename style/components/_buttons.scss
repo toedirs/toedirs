@@ -1,15 +1,14 @@
 // shared styles
 .btn,
 .btn-flat {
-  font-weight: 500;
   border: $button-border;
   border-radius: $button-radius;
   display: inline-block;
   height: $button-height;
   line-height: $button-height;
   padding: $button-padding;
+  text-transform: uppercase;
   vertical-align: middle;
-  user-select: none;
   -webkit-tap-highlight-color: transparent; // Gets rid of tap active state
 }
 
@@ -54,6 +53,14 @@
   }
 }
 
+// Shared focus button style
+.btn,
+.btn-floating {
+  &:focus {
+    background-color: darken($button-raised-background, 10%);
+  }
+}
+
 // Raised Button
 .btn {
   text-decoration: none;
@@ -68,10 +75,6 @@
     background-color: $button-raised-background-hover;
     @extend .z-depth-1-half;
   }
-  &:focus {
-    background-color: $button-raised-background-focus;
-    @extend .z-depth-1-half;
-  }
 }
 
 // Floating button
@@ -80,16 +83,12 @@
     background-color: $button-floating-background-hover;
     @extend .z-depth-1-half;
   }
-  &:focus {
-    background-color: $button-floating-background-focus;
-    @extend .z-depth-1-half;
-  }
   &:before {
     border-radius: 0;
   }
   &.btn-large {
     &.halfway-fab {
-      bottom: -$button-floating-large-size * 0.5;
+      bottom: -$button-floating-large-size / 2;
     }
     width: $button-floating-large-size;
     height: $button-floating-large-size;
@@ -101,7 +100,7 @@
 
   &.btn-small {
     &.halfway-fab {
-      bottom: -$button-floating-small-size * 0.5;
+      bottom: -$button-floating-small-size / 2;
     }
     width: $button-floating-small-size;
     height: $button-floating-small-size;
@@ -117,7 +116,7 @@
     }
     position: absolute;
     right: 24px;
-    bottom: -$button-floating-size * 0.5;
+    bottom: -$button-floating-size / 2;
   }
   display: inline-block;
   color: $button-floating-color;
@@ -154,8 +153,6 @@ button.btn-floating {
   &.active {
     ul {
       visibility: visible;
-      padding-left: 0;
-      list-style-type: none;    
     }
   }
 
@@ -229,10 +226,9 @@ button.btn-floating {
           height: 100%;
           background-color: transparent;
           box-shadow: none;
-          color: $button-floating-color;
+          color: #fff;
           line-height: $button-floating-large-size;
           z-index: 1;
-
           i {
             line-height: inherit;
           }
@@ -284,10 +280,9 @@ button.btn-floating {
   &:focus,
   &:hover {
     box-shadow: none;
-    background-color: $button-flat-hover-background-color;
   }
   &:focus {
-    background-color: $button-flat-focus-background-color;
+    background-color: rgba(0, 0, 0, .1);
   }
   &.disabled,
   &.btn-flat[disabled]  {

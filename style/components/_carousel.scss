@@ -57,9 +57,6 @@
   }
 
   .indicators {
-    padding-left: 0;
-    list-style-type: none;
-
     position: absolute;
     text-align: center;
     left: 0;
@@ -69,7 +66,7 @@
 
     .indicator-item {
       &.active {
-        background-color: $carousel-indicator-color-active;
+        background-color: #fff;
       }
 
       display: inline-block;
@@ -78,7 +75,7 @@
       height: 8px;
       width: 8px;
       margin: 24px 4px;
-      background-color: $carousel-indicator-color;
+      background-color: rgba(255,255,255,.5);
 
       transition: background-color .3s;
       border-radius: 50%;
