@@ -1,4 +1,4 @@
-use std::iter;
+use std::{collections::HashSet, iter};
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
@@ -8,6 +8,7 @@ use leptos_router::*;
 use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
 use rrule::{RRule, Validated};
 use serde::{Deserialize, Serialize};
+use thaw::*;
 
 use crate::elements::select::Select;
 
@@ -427,6 +428,17 @@ pub async fn add_workout(name: String, workout_type: String) -> Result<(), Serve
     Ok(())
 }
 
+#[derive(Clone, PartialEq)]
+pub enum EndType {
+    Occurences,
+    EndDate,
+}
+#[derive(Clone, PartialEq)]
+pub enum RepetitionType {
+    Weekly,
+    Monthly,
+}
+
 #[component]
 pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     let on_submit = move |_ev: SubmitEvent| {
@@ -441,6 +453,12 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         }
     });
     let select_value = create_rw_signal("0".to_string());
+    let end_date = create_rw_signal(Some(Local::now().date_naive()));
+    let occurences = create_rw_signal(1);
+    let end_type = create_rw_signal(EndType::Occurences);
+    let repetition_type = create_rw_signal("weekly".to_string());
+    let repetition_frequency = create_rw_signal(1);
+    let repetition_on = create_rw_signal(HashSet::new());
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <div
@@ -477,17 +495,92 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                         value=select_value
                                                         name="workout_type"
                                                         options=Some(options)
-                                                        attr:id="workout_type"
+                                                        attr:id="workout_templ"
                                                     >
 
                                                         {}
                                                     </Select>
+                                                    <label for="workout_templ">Workout Template</label>
                                                 }
                                             })
                                     }}
 
                                 </div>
                             </Suspense>
+                        </div>
+                        <div class="row">
+                            <div class="col s6 input-field">
+                                <DatePicker attr:id="start_date"/>
+                                <label for="start_date">Start Date</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col s2 input-field valign-wrapper">"Repeat"</div>
+                            <div class="col s2 input-field">
+                                <Select
+                                    value=repetition_type
+                                    name="repetition_type"
+                                    options=None
+                                    attr:id="repetition_type"
+                                >
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </Select>
+                            </div>
+                            <div class="col s2 input-field valign-wrapper">"every"</div>
+                            <div class="col s2 input-field">
+                                <InputNumber value=repetition_frequency step=1/>
+                            </div>
+                            <div class="col s2 input-field valign-wrapper">
+                                {move || match repetition_type.get().as_str() {
+                                    "weekly" => "weeks",
+                                    _ => "months",
+                                }}
+
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col s1">"On"</div>
+                            <div class="col s11">
+                                <CheckboxGroup value=repetition_on>
+                                    <CheckboxItem label="Monday" key="monday"/>
+                                    <CheckboxItem label="Tuesday" key="tuesday"/>
+                                    <CheckboxItem label="Wednesday" key="wednesday"/>
+                                    <CheckboxItem label="Thursday" key="thursday"/>
+                                    <CheckboxItem label="Friday" key="friday"/>
+                                    <CheckboxItem label="Saturday" key="saturday"/>
+                                    <CheckboxItem label="Sunday" key="sunday"/>
+                                </CheckboxGroup>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col s6 input-field">
+                                <p>
+                                    <label>
+                                        <input
+                                            name="end"
+                                            type="radio"
+                                            on:click=move |_| end_type.set(EndType::Occurences)
+                                            checked
+                                        />
+                                        <span>
+                                            "After" <InputNumber value=occurences step=1/> "occurences"
+                                        </span>
+                                    </label>
+                                </p>
+                                <p>
+                                    <label>
+                                        <input
+                                            name="end"
+                                            type="radio"
+                                            on:click=move |_| end_type.set(EndType::EndDate)
+                                        />
+                                        <span>
+                                            "On date" <DatePicker value=end_date attr:id="end_date"/>
+                                        </span>
+                                    </label>
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </ActionForm>
