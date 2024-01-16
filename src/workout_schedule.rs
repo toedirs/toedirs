@@ -2,11 +2,11 @@ use std::{collections::HashSet, iter};
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use chrono::{DateTime, Datelike, Duration, IsoWeek, Local, NaiveDate, Weekday};
+use chrono::{DateTime, Datelike, Duration, IsoWeek, Local, NaiveDate, TimeZone, Weekday};
 use leptos::{ev::SubmitEvent, html::Div, *};
 use leptos_router::*;
 use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
-use rrule::{RRule, Validated};
+use rrule::{NWeekday, RRule, RRuleSet, Tz, Validated};
 use serde::{Deserialize, Serialize};
 use thaw::*;
 
@@ -453,20 +453,85 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         }
     });
     let select_value = create_rw_signal("0".to_string());
+    let start_date = create_rw_signal(Some(Local::now().date_naive()));
     let end_date = create_rw_signal(Some(Local::now().date_naive()));
     let occurences = create_rw_signal(1);
     let end_type = create_rw_signal(EndType::Occurences);
     let repetition_type = create_rw_signal("weekly".to_string());
     let repetition_frequency = create_rw_signal(1);
-    let repetition_on = create_rw_signal(HashSet::new());
+    let repetition_on_day = create_rw_signal(HashSet::<String>::new());
+    let repetition_rule = create_resource(
+        move || {
+            (
+                start_date.get(),
+                end_date.get(),
+                occurences.get(),
+                end_type.get(),
+                repetition_type.get(),
+                repetition_frequency.get(),
+                repetition_on_day.get(),
+            )
+        },
+        move |(
+            start,
+            end,
+            occurences,
+            end_type,
+            repetition_type,
+            repetition_freq,
+            repetition_on_day,
+        )| async move {
+            let mut rruleset = RRuleSet::new(
+                Tz::LOCAL
+                    .from_local_datetime(&start.unwrap().and_hms_opt(0, 0, 0).unwrap())
+                    .unwrap(),
+            );
+            let mut rrule = match repetition_type.as_str() {
+                "daily" => RRule::new(rrule::Frequency::Daily),
+                "weekly" => RRule::new(rrule::Frequency::Weekly),
+                "monthly" => RRule::new(rrule::Frequency::Monthly),
+                _ => unreachable!(),
+            };
+            rrule = match end_type {
+                EndType::Occurences => rrule.count(occurences),
+                EndType::EndDate => rrule.until(
+                    Tz::LOCAL
+                        .from_local_datetime(&end.unwrap().and_hms_opt(0, 0, 0).unwrap())
+                        .unwrap(),
+                ),
+            };
+            rrule = rrule.interval(repetition_freq);
+            rrule = match rrule.get_freq() {
+                rrule::Frequency::Monthly => todo!(),
+                rrule::Frequency::Weekly => {
+                    let days: Vec<_> = repetition_on_day
+                        .iter()
+                        .map(|d| NWeekday::Every(d.parse::<Weekday>().unwrap()))
+                        .collect();
+                    rrule.by_weekday(days)
+                }
+                rrule::Frequency::Daily => todo!(),
+                _ => unreachable!(),
+            };
+            rrule
+                .validate(
+                    Tz::LOCAL
+                        .from_local_datetime(&start.unwrap().and_hms_opt(0, 0, 0).unwrap())
+                        .unwrap(),
+                )
+                .map(|r| rruleset.rrule(r))
+                .map(|r| r.to_string())
+                .unwrap_or("".to_string())
+        },
+    );
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <div
                 class="modal"
-                style="z-index: 1003; display: block; opacity: 1; top: 10%;overflow:visible;"
+                style="z-index: 1003; display: block; opacity: 1; top: 10%;overflow:scroll;"
             >
                 <ActionForm action=add_workout_action on:submit=on_submit>
-                    <div class="modal-content" style="overflow:visible;">
+                    <div class="modal-content" style="overflow:scroll;">
                         <h4 class="black-text">"Add workout to calendar"</h4>
                         <div class="row"></div>
                         <div class="row">
@@ -509,8 +574,11 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                             </Suspense>
                         </div>
                         <div class="row">
+                            <input value=repetition_rule/>
+                        </div>
+                        <div class="row">
                             <div class="col s6 input-field">
-                                <DatePicker attr:id="start_date"/>
+                                <DatePicker value=start_date attr:id="start_date"/>
                                 <label for="start_date">Start Date</label>
                             </div>
                         </div>
@@ -544,7 +612,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                         <div class="row">
                             <div class="col s1">"On"</div>
                             <div class="col s11">
-                                <CheckboxGroup value=repetition_on>
+                                <CheckboxGroup value=repetition_on_day>
                                     <CheckboxItem label="Monday" key="monday"/>
                                     <CheckboxItem label="Tuesday" key="tuesday"/>
                                     <CheckboxItem label="Wednesday" key="wednesday"/>
