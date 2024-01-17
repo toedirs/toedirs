@@ -1,12 +1,15 @@
-use std::{collections::HashSet, iter};
+use std::{
+    collections::{HashMap, HashSet},
+    iter,
+};
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use chrono::{DateTime, Datelike, Duration, IsoWeek, Local, NaiveDate, TimeZone, Weekday};
+use chrono::{DateTime, Datelike, Days, Duration, IsoWeek, Local, NaiveDate, TimeZone, Weekday};
 use leptos::{ev::SubmitEvent, html::Div, *};
 use leptos_router::*;
 use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
-use rrule::{NWeekday, RRule, Tz, Validated};
+use rrule::{NWeekday, RRule, RRuleSet, Tz, Unvalidated, Validated};
 use serde::{Deserialize, Serialize};
 use thaw::*;
 
@@ -80,14 +83,14 @@ pub struct ScalingEntry {
 }
 
 #[component]
-pub fn WorkoutDay(week: IsoWeek, today: DateTime<Local>, day: Weekday) -> impl IntoView {
+pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> impl IntoView {
     view! {
         <div class="col s1 center-align">
             <div class="row">
                 <div class=move || {
                     format!(
                         "col s12 white-text {}",
-                        if week == today.iso_week() && today.weekday() == day {
+                        if week.week == today.iso_week() && today.weekday() == day {
                             "blue darken-2"
                         } else {
                             "indigo darken-1"
@@ -97,7 +100,7 @@ pub fn WorkoutDay(week: IsoWeek, today: DateTime<Local>, day: Weekday) -> impl I
                     {move || {
                         format!(
                             "{}",
-                            NaiveDate::from_isoywd_opt(week.year(), week.week(), day)
+                            NaiveDate::from_isoywd_opt(week.week.year(), week.week.week(), day)
                                 .unwrap()
                                 .format("%d"),
                         )
@@ -105,40 +108,136 @@ pub fn WorkoutDay(week: IsoWeek, today: DateTime<Local>, day: Weekday) -> impl I
 
                 </div>
             </div>
+            <div class="row">
+                <div class="col s12">{move || { format!("{:?}", week.workouts.get(&day)) }}
+                </div>
+            </div>
 
         </div>
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkoutInstance {
+    id: i64,
+    user_id: i64,
+    workout_template_id: i64,
+    start_date: DateTime<Local>,
+    rrule: String,
+    active: bool,
+}
+
+#[server(GetWorkoutInstances, "/api")]
+pub async fn get_workout_instances(
+    from: DateTime<Local>,
+    to: DateTime<Local>,
+) -> Result<Vec<WorkoutInstance>, ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
+    let rrules: Vec<WorkoutInstance> = sqlx::query_as!(
+        WorkoutInstance,
+        r#"
+            SELECT *
+            FROM workout_instances
+            WHERE user_id=$1::bigint
+        "#,
+        user.id as _
+    )
+    .fetch_all(&pool)
+    .await?;
+    Ok(rrules)
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkoutWeek {
+    week: IsoWeek,
+    workouts: HashMap<Weekday, Vec<i64>>,
+}
+async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
+    let start = &NaiveDate::from_isoywd_opt(week.year(), week.week(), Weekday::Mon)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap();
+    let end = &NaiveDate::from_isoywd_opt(week.year(), week.week(), Weekday::Sun)
+        .unwrap()
+        .checked_add_days(Days::new(1))
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap();
+    let instances = get_workout_instances(
+        Local.from_local_datetime(start).unwrap(),
+        Local.from_local_datetime(end).unwrap(),
+    )
+    .await
+    .unwrap();
+    let mut workouts = HashMap::new();
+    for instance in instances {
+        let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
+            instance
+                .rrule
+                .parse::<RRule<Unvalidated>>()
+                .unwrap()
+                .validate(instance.start_date.with_timezone(&Tz::Local(Local)))
+                .unwrap(),
+        );
+        let occurences = rrule
+            .after(Tz::LOCAL.from_local_datetime(start).unwrap())
+            .before(Tz::LOCAL.from_local_datetime(end).unwrap())
+            .all_unchecked();
+        for occurence in occurences {
+            workouts
+                .entry(occurence.weekday())
+                .and_modify(|o: &mut Vec<_>| o.push(instance.id))
+                .or_insert(vec![instance.id]);
+        }
+    }
+    WorkoutWeek { week, workouts }
+}
+
 #[component]
 pub fn WorkoutCalendar() -> impl IntoView {
     let today = Local::now();
-    let weeks: Vec<_> = (0..8)
-        .map(|w| (today + Duration::weeks(w - 1)).iso_week())
-        .collect();
-    let weeks = create_rw_signal(weeks);
+    let weeks = create_rw_signal(Vec::<WorkoutWeek>::new());
+    // spawn_local(async move {
+    //     let mut week_entries: Vec<_> = Vec::new();
+    //     for w in 0..8 {
+    //         week_entries.push(get_week_workouts((today + Duration::weeks(w - 1)).iso_week()).await);
+    //     }
+    //     weeks.set(week_entries)
+    // });
     let calendar_list_el = create_node_ref::<Div>();
     let _ = use_infinite_scroll_with_options(
         calendar_list_el,
         move |_| async move {
-            let newest = weeks.with_untracked(|wk| wk.last().unwrap().clone());
+            let newest = weeks
+                .with_untracked(|wk| wk.last().map(|l| l.week))
+                .unwrap_or(today.iso_week());
             let newest =
                 NaiveDate::from_isoywd_opt(newest.year(), newest.week(), Weekday::Mon).unwrap();
-            weeks.update(|v| v.extend((1..9).map(|w| (newest + Duration::weeks(w)).iso_week())));
+            let mut week_entries: Vec<_> = Vec::new();
+            for w in 1..9 {
+                week_entries
+                    .push(get_week_workouts((newest + Duration::weeks(w)).iso_week()).await);
+            }
+            weeks.update(|v| v.extend(week_entries));
         },
         UseInfiniteScrollOptions::default().direction(leptos_use::core::Direction::Bottom),
     );
     let _ = use_infinite_scroll_with_options(
         calendar_list_el,
         move |_| async move {
-            let newest = weeks.with_untracked(|wk| wk.iter().next().unwrap().clone());
+            let newest = weeks
+                .with_untracked(|wk| wk.iter().next().map(|n| n.week))
+                .unwrap_or(today.iso_week());
             let newest =
                 NaiveDate::from_isoywd_opt(newest.year(), newest.week(), Weekday::Mon).unwrap();
+            let new_week = get_week_workouts((newest - Duration::weeks(1)).iso_week()).await;
             weeks.update(|v| {
-                *v = std::iter::once(1)
-                    .rev()
-                    .map(|w| (newest - Duration::weeks(w)).iso_week())
-                    .chain((*v).iter().map(|x| *x))
+                *v = std::iter::once(new_week)
+                    .chain((*v).iter().map(|x| x.clone()))
                     .collect();
             });
             if let Some(el) = calendar_list_el.get() {
@@ -192,18 +291,18 @@ pub fn WorkoutCalendar() -> impl IntoView {
             <div class="calendar-container" node_ref=calendar_list_el>
 
                 <div class="calendar-body">
-                    <For each=move || weeks.get() key=|i| format!("{:?}", i) let:item>
+                    <For each=move || weeks.get() key=|i| format!("{:?}", i.week) let:item>
                         <div class="calendar-row cal-content">
                             <div class="col s1 center-align valign-wrapper p-6">
-                                {item.year()} - {item.week()}
+                                {item.week.year()} - {item.week.week()}
                             </div>
-                            <WorkoutDay week=item today=today day=Weekday::Mon/>
-                            <WorkoutDay week=item today=today day=Weekday::Tue/>
-                            <WorkoutDay week=item today=today day=Weekday::Wed/>
-                            <WorkoutDay week=item today=today day=Weekday::Thu/>
-                            <WorkoutDay week=item today=today day=Weekday::Fri/>
-                            <WorkoutDay week=item today=today day=Weekday::Sat/>
-                            <WorkoutDay week=item today=today day=Weekday::Sun/>
+                            <WorkoutDay week=item.clone() today=today day=Weekday::Mon/>
+                            <WorkoutDay week=item.clone() today=today day=Weekday::Tue/>
+                            <WorkoutDay week=item.clone() today=today day=Weekday::Wed/>
+                            <WorkoutDay week=item.clone() today=today day=Weekday::Thu/>
+                            <WorkoutDay week=item.clone() today=today day=Weekday::Fri/>
+                            <WorkoutDay week=item.clone() today=today day=Weekday::Sat/>
+                            <WorkoutDay week=item.clone() today=today day=Weekday::Sun/>
                             <div class="col s1 center-align">Load</div>
 
                         </div>
@@ -406,7 +505,7 @@ pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnErr
 
 #[server(AddWorkout, "/api")]
 pub async fn add_workout(
-    workout_type: String,
+    workout_type: i32,
     start_date: DateTime<Local>,
     rrule: String,
 ) -> Result<(), ServerFnError> {
@@ -415,20 +514,18 @@ pub async fn add_workout(
     let user = auth
         .current_user
         .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
-    // sqlx::query!(
-    //     r#"
-    //     INSERT INTO workout_templates (user_id, template_name, workout_type)
-    //     VALUES ($1, $2,$3)
-    //     "#,
-    //     user.id as _,
-    //     name,
-    //     TryInto::<WorkoutType>::try_into(workout_type)
-    //         .map_err(|e| ServerFnError::ServerError("Couldn't parse workout type".to_string()))?
-    //         as _
-    // )
-    // .execute(&pool)
-    // .await
-    // .map_err(|e| ServerFnError::ServerError(format!("Error saving workout template: {}", e)))?;
+    sqlx::query!(
+        r#"INSERT INTO workout_instances (user_id, workout_template_id, start_date, rrule)
+        VALUES ($1,$2,$3,$4)
+        "#,
+        user.id as _,
+        workout_type,
+        start_date,
+        rrule
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::ServerError(format!("Error saving workout template: {}", e)))?;
     Ok(())
 }
 
@@ -529,7 +626,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                     on:submit=move |ev: SubmitEvent| {
                         add_workout_action
                             .dispatch(AddWorkout {
-                                workout_type: workout_type.get_untracked(),
+                                workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
                                 start_date: start_date()
                                     .map(|d| {
                                         Local
