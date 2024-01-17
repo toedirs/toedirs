@@ -6,7 +6,7 @@ use chrono::{DateTime, Datelike, Duration, IsoWeek, Local, NaiveDate, TimeZone, 
 use leptos::{ev::SubmitEvent, html::Div, *};
 use leptos_router::*;
 use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
-use rrule::{NWeekday, RRule, RRuleSet, Tz, Validated};
+use rrule::{NWeekday, RRule, Tz, Validated};
 use serde::{Deserialize, Serialize};
 use thaw::*;
 
@@ -405,26 +405,30 @@ pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnErr
 }
 
 #[server(AddWorkout, "/api")]
-pub async fn add_workout(name: String, workout_type: String) -> Result<(), ServerFnError> {
+pub async fn add_workout(
+    workout_type: String,
+    start_date: DateTime<Local>,
+    rrule: String,
+) -> Result<(), ServerFnError> {
     let pool = pool()?;
     let auth = auth()?;
     let user = auth
         .current_user
         .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
-    sqlx::query!(
-        r#"
-        INSERT INTO workout_templates (user_id, template_name, workout_type)
-        VALUES ($1, $2,$3)
-        "#,
-        user.id as _,
-        name,
-        TryInto::<WorkoutType>::try_into(workout_type)
-            .map_err(|e| ServerFnError::ServerError("Couldn't parse workout type".to_string()))?
-            as _
-    )
-    .execute(&pool)
-    .await
-    .map_err(|e| ServerFnError::ServerError(format!("Error saving workout template: {}", e)))?;
+    // sqlx::query!(
+    //     r#"
+    //     INSERT INTO workout_templates (user_id, template_name, workout_type)
+    //     VALUES ($1, $2,$3)
+    //     "#,
+    //     user.id as _,
+    //     name,
+    //     TryInto::<WorkoutType>::try_into(workout_type)
+    //         .map_err(|e| ServerFnError::ServerError("Couldn't parse workout type".to_string()))?
+    //         as _
+    // )
+    // .execute(&pool)
+    // .await
+    // .map_err(|e| ServerFnError::ServerError(format!("Error saving workout template: {}", e)))?;
     Ok(())
 }
 
@@ -433,18 +437,9 @@ pub enum EndType {
     Occurences,
     EndDate,
 }
-#[derive(Clone, PartialEq)]
-pub enum RepetitionType {
-    Weekly,
-    Monthly,
-}
 
 #[component]
 pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
-    let on_submit = move |_ev: SubmitEvent| {
-        show.set(false);
-    };
-    let add_workout_action = create_server_action::<AddWorkout>();
     let workout_templates = create_resource(show, |value| async move {
         if value {
             get_workout_templates().await.unwrap_or_default()
@@ -452,7 +447,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
             Vec::new()
         }
     });
-    let select_value = create_rw_signal("0".to_string());
+    let workout_type = create_rw_signal("0".to_string());
     let start_date = create_rw_signal(Some(Local::now().date_naive()));
     let end_date = create_rw_signal(Some(Local::now().date_naive()));
     let occurences = create_rw_signal(1);
@@ -460,6 +455,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     let repetition_type = create_rw_signal("weekly".to_string());
     let repetition_frequency = create_rw_signal(1);
     let repetition_on_day = create_rw_signal(HashSet::<String>::new());
+    let month_day = create_rw_signal(1);
     let repetition_rule = create_resource(
         move || {
             (
@@ -470,6 +466,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                 repetition_type.get(),
                 repetition_frequency.get(),
                 repetition_on_day.get(),
+                month_day.get(),
             )
         },
         move |(
@@ -480,12 +477,8 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
             repetition_type,
             repetition_freq,
             repetition_on_day,
+            month_day,
         )| async move {
-            let mut rruleset = RRuleSet::new(
-                Tz::LOCAL
-                    .from_local_datetime(&start.unwrap().and_hms_opt(0, 0, 0).unwrap())
-                    .unwrap(),
-            );
             let mut rrule = match repetition_type.as_str() {
                 "daily" => RRule::new(rrule::Frequency::Daily),
                 "weekly" => RRule::new(rrule::Frequency::Weekly),
@@ -502,7 +495,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
             };
             rrule = rrule.interval(repetition_freq);
             rrule = match rrule.get_freq() {
-                rrule::Frequency::Monthly => todo!(),
+                rrule::Frequency::Monthly => rrule.by_month_day(vec![month_day]),
                 rrule::Frequency::Weekly => {
                     let days: Vec<_> = repetition_on_day
                         .iter()
@@ -510,7 +503,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                         .collect();
                     rrule.by_weekday(days)
                 }
-                rrule::Frequency::Daily => todo!(),
+                rrule::Frequency::Daily => rrule,
                 _ => unreachable!(),
             };
             rrule
@@ -519,18 +512,38 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                         .from_local_datetime(&start.unwrap().and_hms_opt(0, 0, 0).unwrap())
                         .unwrap(),
                 )
-                .map(|r| rruleset.rrule(r))
                 .map(|r| r.to_string())
                 .unwrap_or("".to_string())
         },
     );
+    let add_workout_action = create_server_action::<AddWorkout>();
+
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <div
                 class="modal"
                 style="z-index: 1003; display: block; opacity: 1; top: 10%;overflow:scroll;"
             >
-                <ActionForm action=add_workout_action on:submit=on_submit>
+                <Form
+                    action=""
+                    on:submit=move |ev: SubmitEvent| {
+                        add_workout_action
+                            .dispatch(AddWorkout {
+                                workout_type: workout_type.get_untracked(),
+                                start_date: start_date()
+                                    .map(|d| {
+                                        Local
+                                            .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                                            .unwrap()
+                                    })
+                                    .unwrap(),
+                                rrule: repetition_rule.get().unwrap(),
+                            });
+                        show.set(false);
+                        ev.prevent_default();
+                    }
+                >
+
                     <div class="modal-content" style="overflow:scroll;">
                         <h4 class="black-text">"Add workout to calendar"</h4>
                         <div class="row"></div>
@@ -557,7 +570,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                     .collect::<Vec<_>>();
                                                 view! {
                                                     <Select
-                                                        value=select_value
+                                                        value=workout_type
                                                         name="workout_type"
                                                         options=Some(options)
                                                         attr:id="workout_templ"
@@ -593,6 +606,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                     options=None
                                     attr:id="repetition_type"
                                 >
+                                    <option value="daily">Daily</option>
                                     <option value="weekly">Weekly</option>
                                     <option value="monthly">Monthly</option>
                                 </Select>
@@ -604,25 +618,36 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                             <div class="col s2 input-field valign-wrapper">
                                 {move || match repetition_type.get().as_str() {
                                     "weekly" => "weeks",
+                                    "daily" => "days",
                                     _ => "months",
                                 }}
 
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col s1">"On"</div>
-                            <div class="col s11">
-                                <CheckboxGroup value=repetition_on_day>
-                                    <CheckboxItem label="Monday" key="monday"/>
-                                    <CheckboxItem label="Tuesday" key="tuesday"/>
-                                    <CheckboxItem label="Wednesday" key="wednesday"/>
-                                    <CheckboxItem label="Thursday" key="thursday"/>
-                                    <CheckboxItem label="Friday" key="friday"/>
-                                    <CheckboxItem label="Saturday" key="saturday"/>
-                                    <CheckboxItem label="Sunday" key="sunday"/>
-                                </CheckboxGroup>
+                        <Show when=move || { repetition_type.get() == "weekly" } fallback=|| {}>
+                            <div class="row">
+                                <div class="col s1">"On"</div>
+                                <div class="col s11">
+                                    <CheckboxGroup value=repetition_on_day>
+                                        <CheckboxItem label="Monday" key="monday"/>
+                                        <CheckboxItem label="Tuesday" key="tuesday"/>
+                                        <CheckboxItem label="Wednesday" key="wednesday"/>
+                                        <CheckboxItem label="Thursday" key="thursday"/>
+                                        <CheckboxItem label="Friday" key="friday"/>
+                                        <CheckboxItem label="Saturday" key="saturday"/>
+                                        <CheckboxItem label="Sunday" key="sunday"/>
+                                    </CheckboxGroup>
+                                </div>
                             </div>
-                        </div>
+                        </Show>
+                        <Show when=move || { repetition_type.get() == "monthly" } fallback=|| {}>
+                            <div class="row">
+                                <div class="col s1">On day</div>
+                                <div class="col s3 input-field">
+                                    <InputNumber value=month_day step=1/>
+                                </div>
+                            </div>
+                        </Show>
                         <div class="row">
                             <div class="col s6 input-field">
                                 "End" <p>
@@ -652,7 +677,13 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                             </div>
                         </div>
                     </div>
-                </ActionForm>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn waves-effect waves-light">
+                            <i class="material-symbols-rounded right">save</i>
+                            Add
+                        </button>
+                    </div>
+                </Form>
             </div>
             <div
                 class="modal-overlay"
