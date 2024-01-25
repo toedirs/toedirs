@@ -11,12 +11,17 @@ use leptos_router::*;
 use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
 use rrule::{NWeekday, RRule, RRuleSet, Tz, Unvalidated, Validated};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "ssr")]
+use sqlx::{postgres::*, *};
+use std::str::FromStr;
+use strum;
 use thaw::*;
 
 use crate::elements::select::Select;
 
 pub trait WorkoutStep: std::fmt::Debug {}
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type, sqlx::FromRow))]
 /// A template for a single workout, e.g. a bicycle ride or a weight session.
 /// Includes all the different steps involved.
 pub struct WorkoutTemplate {
@@ -86,7 +91,7 @@ pub struct ScalingEntry {
 pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> impl IntoView {
     view! {
         <div class="col s1 center-align">
-            <div class="row">
+            <div class="row" style="margin-bottom:0px;">
                 <div class=move || {
                     format!(
                         "col s12 white-text {}",
@@ -109,7 +114,22 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                 </div>
             </div>
             <div class="row">
-                <div class="col s12">{move || { format!("{:?}", week.workouts.get(&day)) }}
+                <div class="col s12">
+                    {week
+                        .workouts
+                        .get(&day)
+                        .map(|w| {
+                            view! {
+                                <div class="collection">
+                                    {w
+                                        .into_iter()
+                                        .map(|e| view! { <li class="collection-item">{e}</li> })
+                                        .collect::<Vec<_>>()}
+
+                                </div>
+                            }
+                        })}
+
                 </div>
             </div>
 
@@ -118,13 +138,36 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+// #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct WorkoutInstance {
     id: i64,
     user_id: i64,
-    workout_template_id: i64,
     start_date: DateTime<Local>,
     rrule: String,
     active: bool,
+    template: WorkoutTemplate,
+}
+#[cfg(feature = "ssr")]
+impl sqlx::FromRow<'_, PgRow> for WorkoutInstance {
+    fn from_row(row: &PgRow) -> sqlx::Result<Self> {
+        let template = WorkoutTemplate {
+            id: row.get::<(i64, i32, String, String), &str>("template").0,
+            user_id: row.get::<(i64, i32, String, String), &str>("template").1,
+            template_name: row.get::<(i64, i32, String, String), &str>("template").2,
+            workout_type: WorkoutType::from_str(
+                &row.get::<(i64, i32, String, String), &str>("template").3,
+            )
+            .unwrap(),
+        };
+        Ok(Self {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            start_date: row.get("start_date"),
+            rrule: row.get("rrule"),
+            active: row.get("active"),
+            template: template,
+        })
+    }
 }
 
 #[server(GetWorkoutInstances, "/api")]
@@ -137,15 +180,50 @@ pub async fn get_workout_instances(
     let user = auth
         .current_user
         .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
-    let rrules: Vec<WorkoutInstance> = sqlx::query_as!(
-        WorkoutInstance,
+    // use this once `as` is supported in record types
+    // let rrules: Vec<WorkoutInstance> = sqlx::query_as!(
+    //     WorkoutInstance,
+    //     r#"
+    //         SELECT
+    //             i.id,
+    //             i.user_id,
+    //             i.start_date,
+    //             i.rrule,
+    //             i.active,
+    //             (
+    //                 t.id,
+    //                 t.user_id,
+    //                 t.template_name,
+    //                 t.workout_type as \"workout_type!: WorkoutType\"
+    //             ) as "template!: WorkoutTemplate"
+    //         FROM workout_instances i
+    //         INNER JOIN workout_templates t ON i.workout_template_id=t.id
+    //         WHERE i.user_id=$1::bigint
+    //     "#,
+    //     user.id as _
+    // )
+    // .fetch_all(&pool)
+    // .await?;
+    let rrules: Vec<WorkoutInstance> = sqlx::query_as::<_, WorkoutInstance>(
         r#"
-            SELECT *
-            FROM workout_instances
-            WHERE user_id=$1::bigint
+            SELECT 
+                i.id,
+                i.user_id::int8,
+                i.start_date,
+                i.rrule,
+                i.active,
+                (
+                    t.id, 
+                    t.user_id,
+                    t.template_name,
+                    t.workout_type::text
+                ) as template
+            FROM workout_instances i
+            INNER JOIN workout_templates t ON i.workout_template_id=t.id
+            WHERE i.user_id=$1::bigint
         "#,
-        user.id as _
     )
+    .bind(user.id as i32)
     .fetch_all(&pool)
     .await?;
     Ok(rrules)
@@ -154,7 +232,7 @@ pub async fn get_workout_instances(
 #[derive(Debug, Clone)]
 pub struct WorkoutWeek {
     week: IsoWeek,
-    workouts: HashMap<Weekday, Vec<i64>>,
+    workouts: HashMap<Weekday, Vec<String>>,
 }
 async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
     let start = &NaiveDate::from_isoywd_opt(week.year(), week.week(), Weekday::Mon)
@@ -166,6 +244,8 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
         .checked_add_days(Days::new(1))
         .unwrap()
         .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .checked_sub_signed(Duration::milliseconds(1))
         .unwrap();
     let instances = get_workout_instances(
         Local.from_local_datetime(start).unwrap(),
@@ -174,6 +254,7 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
     .await
     .unwrap();
     let mut workouts = HashMap::new();
+    leptos::logging::log!("{:?} : {:?}", instances, start);
     for instance in instances {
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
             instance
@@ -190,8 +271,8 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
         for occurence in occurences {
             workouts
                 .entry(occurence.weekday())
-                .and_modify(|o: &mut Vec<_>| o.push(instance.id))
-                .or_insert(vec![instance.id]);
+                .and_modify(|o: &mut Vec<_>| o.push(instance.template.template_name.clone()))
+                .or_insert(vec![instance.template.template_name.clone()]);
         }
     }
     WorkoutWeek { week, workouts }
@@ -240,7 +321,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
                     .chain((*v).iter().map(|x| x.clone()))
                     .collect();
             });
-            if let Some(el) = calendar_list_el.get() {
+            if let Some(el) = calendar_list_el.get_untracked() {
                 el.set_scroll_top(150);
             }
         },
@@ -357,6 +438,8 @@ pub fn WorkoutCalendar() -> impl IntoView {
     feature = "ssr",
     sqlx(type_name = "workout_type", rename_all = "snake_case")
 )]
+#[derive(strum::EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum WorkoutType {
     Run,
     Strength,

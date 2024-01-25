@@ -46,6 +46,7 @@ thaw = { version = "0.1.6", default-features = false, optional=true}
 leptos-use = "0.9.0"
 web-sys = "0.3.66"
 sentry = { version = "0.32.1", features = ["anyhow", "tower", "tower-http", "tower-axum-matched-path"], optional= true}
+strum = { version = "0.25.0", features = ["strum_macros", "derive"] }
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_charts/hydrate","thaw/hydrate" ]

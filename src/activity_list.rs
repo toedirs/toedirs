@@ -23,7 +23,19 @@ pub async fn get_activity_list() -> Result<Vec<ActivityListEntry>, ServerFnError
     }
     let user = auth.current_user.unwrap();
     let pool = pool()?;
-    let activities = query_as!(ActivityListEntry, r#"SELECT activities.id, activities.start_time, activities.duration  FROM activities WHERE activities.user_id = $1::bigint"#, user.id).fetch_all(&pool).await?;
+    let activities = query_as!(
+        ActivityListEntry,
+        r#"
+        SELECT 
+            activities.id, 
+            activities.start_time, 
+            activities.duration  
+        FROM activities 
+        WHERE activities.user_id = $1::bigint"#,
+        user.id
+    )
+    .fetch_all(&pool)
+    .await?;
     Ok(activities)
 }
 
