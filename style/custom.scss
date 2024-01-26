@@ -91,7 +91,9 @@ div.select-dropdown.dropdown-trigger {
 }
 
 .workout-parameter {
-  background: #EEE;
+  div {
+    background: #EEE;
+  }
 
   input[type="text"],
   input[type="number"] {
@@ -103,14 +105,20 @@ div.select-dropdown.dropdown-trigger {
     margin-bottom: 0;
   }
 
-  &::before {
+  &::before,
+  &::after {
     display: block;
-    height: 15px;
     background-color: transparent;
     content: " ";
   }
 
-  &.drag-over::before {
+  &.drag-over.before::before {
     background-color: #AAA;
+    height: 15px;
+  }
+
+  &.drag-over.after::after {
+    background-color: #AAA;
+    height: 15px;
   }
 }

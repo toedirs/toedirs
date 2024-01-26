@@ -208,6 +208,25 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
 
                                                 on:dragover=move |ev: DragEvent| {
                                                     ev.prevent_default();
+                                                    let dt = ev.data_transfer().unwrap();
+                                                    let drag_key = dt
+                                                        .get_data("key")
+                                                        .unwrap()
+                                                        .parse::<u32>()
+                                                        .unwrap();
+                                                    if drag_key == child.key {
+                                                        return;
+                                                    }
+                                                    let src_index = workout_parameters
+                                                        .get_untracked()
+                                                        .iter()
+                                                        .position(|e| e.key == drag_key)
+                                                        .unwrap();
+                                                    let tgt_index = workout_parameters
+                                                        .get_untracked()
+                                                        .iter()
+                                                        .position(|e| e.key == child.key)
+                                                        .unwrap();
                                                     let tgt = ev.target().unwrap();
                                                     let parent = tgt
                                                         .dyn_ref::<HtmlElement>()
@@ -219,6 +238,11 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                     let mut cls = cls_name.split(" ").collect::<Vec<_>>();
                                                     if !cls.contains(&"drag-over") {
                                                         cls.push("drag-over");
+                                                        if src_index > tgt_index {
+                                                            cls.push("before");
+                                                        } else {
+                                                            cls.push("after");
+                                                        }
                                                         let cls_name = cls.join(" ");
                                                         parent.set_class_name(cls_name.as_str());
                                                     }
@@ -237,7 +261,9 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                     if cls.contains(&"drag-over") {
                                                         let cls_name = cls
                                                             .iter()
-                                                            .filter(|&v| v != &"drag-over")
+                                                            .filter(|&v| {
+                                                                v != &"drag-over" && v != &"after" && v != &"before"
+                                                            })
                                                             .map(|v| *v)
                                                             .collect::<Vec<_>>()
                                                             .join(" ");
@@ -265,7 +291,9 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                     if cls.contains(&"drag-over") {
                                                         let cls_name = cls
                                                             .iter()
-                                                            .filter(|&v| v != &"drag-over")
+                                                            .filter(|&v| {
+                                                                v != &"drag-over" && v != &"before" && v != &"after"
+                                                            })
                                                             .map(|v| *v)
                                                             .collect::<Vec<_>>()
                                                             .join(" ");
