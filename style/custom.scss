@@ -90,7 +90,7 @@ div.select-dropdown.dropdown-trigger {
   width: 100%;
 }
 
-.workout_parameter {
+.workout-parameter {
   background: #EEE;
 
   input[type="text"],
@@ -101,5 +101,16 @@ div.select-dropdown.dropdown-trigger {
   .input-field {
     margin-top: 0;
     margin-bottom: 0;
+  }
+
+  &::before {
+    display: block;
+    height: 15px;
+    background-color: transparent;
+    content: " ";
+  }
+
+  &.drag-over::before {
+    background-color: #AAA;
   }
 }

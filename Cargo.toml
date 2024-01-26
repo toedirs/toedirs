@@ -44,7 +44,7 @@ bigdecimal = { version = "0.3.1", features = ["serde"] }
 rrule = "0.11.0"
 thaw = { version = "0.1.6", default-features = false, optional=true}
 leptos-use = "0.9.0"
-web-sys = "0.3.66"
+web-sys = {version="0.3.66",features=["DataTransfer"]}
 sentry = { version = "0.32.1", features = ["anyhow", "tower", "tower-http", "tower-axum-matched-path"], optional= true}
 strum = { version = "0.25.0", features = ["strum_macros", "derive"] }
 

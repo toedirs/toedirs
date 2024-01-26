@@ -6,6 +6,8 @@ use leptos_router::*;
 use sqlx::{postgres::*, *};
 use strum;
 use thaw::*;
+use wasm_bindgen::JsCast;
+use web_sys::{DragEvent, HtmlElement};
 
 use crate::{elements::select::Select, workout_schedule::WorkoutType};
 
@@ -33,7 +35,8 @@ impl Default for Parameter {
 pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
     let select_name = format!("param[{}][param_type]", param.key).to_string();
     view! {
-        <div class="row workout_parameter" draggable="true">
+        <div class="row workout-parameter" draggable="true">
+
             <div class="col s12">
                 <div class="row">
                     <div class="col s12">
@@ -196,7 +199,97 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                 <div class="row">
                                     <div class="col s12">
                                         <For each=workout_parameters key=|s| s.key let:child>
-                                            <WorkoutParameter param=child/>
+                                            <WorkoutParameter
+                                                param=child.clone()
+                                                on:dragstart=move |ev: DragEvent| {
+                                                    let dt = ev.data_transfer().unwrap();
+                                                    dt.set_data("key", child.key.to_string().as_str()).unwrap();
+                                                }
+
+                                                on:dragover=move |ev: DragEvent| {
+                                                    ev.prevent_default();
+                                                    let tgt = ev.target().unwrap();
+                                                    let parent = tgt
+                                                        .dyn_ref::<HtmlElement>()
+                                                        .unwrap()
+                                                        .closest(".workout-parameter")
+                                                        .unwrap()
+                                                        .unwrap();
+                                                    let cls_name = parent.class_name();
+                                                    let mut cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                    if !cls.contains(&"drag-over") {
+                                                        cls.push("drag-over");
+                                                        let cls_name = cls.join(" ");
+                                                        parent.set_class_name(cls_name.as_str());
+                                                    }
+                                                }
+
+                                                on:dragleave=move |ev: DragEvent| {
+                                                    let tgt = ev.target().unwrap();
+                                                    let parent = tgt
+                                                        .dyn_ref::<HtmlElement>()
+                                                        .unwrap()
+                                                        .closest(".workout-parameter")
+                                                        .unwrap()
+                                                        .unwrap();
+                                                    let cls_name = parent.class_name();
+                                                    let cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                    if cls.contains(&"drag-over") {
+                                                        let cls_name = cls
+                                                            .iter()
+                                                            .filter(|&v| v != &"drag-over")
+                                                            .map(|v| *v)
+                                                            .collect::<Vec<_>>()
+                                                            .join(" ");
+                                                        parent.set_class_name(cls_name.as_str());
+                                                    }
+                                                }
+
+                                                on:drop=move |ev: DragEvent| {
+                                                    ev.prevent_default();
+                                                    let dt = ev.data_transfer().unwrap();
+                                                    let drag_key = dt
+                                                        .get_data("key")
+                                                        .unwrap()
+                                                        .parse::<u32>()
+                                                        .unwrap();
+                                                    let tgt = ev.target().unwrap();
+                                                    let parent = tgt
+                                                        .dyn_ref::<HtmlElement>()
+                                                        .unwrap()
+                                                        .closest(".workout-parameter")
+                                                        .unwrap()
+                                                        .unwrap();
+                                                    let cls_name = parent.class_name();
+                                                    let cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                    if cls.contains(&"drag-over") {
+                                                        let cls_name = cls
+                                                            .iter()
+                                                            .filter(|&v| v != &"drag-over")
+                                                            .map(|v| *v)
+                                                            .collect::<Vec<_>>()
+                                                            .join(" ");
+                                                        parent.set_class_name(cls_name.as_str());
+                                                    }
+                                                    if child.key == drag_key {
+                                                        return;
+                                                    }
+                                                    workout_parameters
+                                                        .update(|v| {
+                                                            let src_index = v
+                                                                .iter()
+                                                                .position(|e| e.key == drag_key)
+                                                                .unwrap();
+                                                            let tgt_index = v
+                                                                .iter()
+                                                                .position(|e| e.key == child.key)
+                                                                .unwrap();
+                                                            let el = v.remove(src_index);
+                                                            v.insert(tgt_index, el);
+                                                        });
+                                                }
+                                            />
+
                                         </For>
                                         <div class="row">
                                             <div class="col s2 offset-s5 center-align">
