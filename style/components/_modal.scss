@@ -5,31 +5,56 @@
 
   @extend .z-depth-5;
 
-  display: none;
+  display: flex;
+  flex-direction:column;
   position: fixed;
+  top:2.5%;
   left: 0;
   right: 0;
   background-color: #fafafa;
   padding: 0;
-  max-height: 70%;
+  max-height: 95%;
   width: 55%;
   margin: auto;
-  overflow-y: auto;
 
   border-radius: 2px;
-  will-change: top, opacity;
+  will-change: top,
+  opacity;
 
   @media #{$medium-and-down} {
-   width: 80%;
+    width: 80%;
   }
 
-  h1,h2,h3,h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     margin-top: 0;
   }
 
-  .modal-content {
-    padding: 24px;
+  .modal-header {
+    flex-grow: 0;
+    flex-shrink: 0;
+    height: 56px;
+    padding: 0 24px 0 24px;
+    margin-top: 20px;
   }
+
+  .modal-body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    height: 100%;
+    overflow: auto;
+    position: relative;
+
+    .modal-content {
+      padding: 24px;
+      overflow: auto;
+      height: 100%;
+      width: 100%;
+    }
+  }
+
   .modal-close {
     cursor: pointer;
   }
@@ -39,14 +64,18 @@
     background-color: #fafafa;
     padding: 4px 6px;
     height: 56px;
+    flex-grow: 0;
+    flex-shrink: 0;
     width: 100%;
     text-align: right;
 
-    .btn, .btn-flat {
+    .btn,
+    .btn-flat {
       margin: 6px 0;
     }
   }
 }
+
 .modal-overlay {
   position: fixed;
   z-index: 999;
@@ -76,7 +105,7 @@
   }
 
   .modal-footer {
-    border-top: 1px solid rgba(0,0,0,.1);
+    border-top: 1px solid rgba(0, 0, 0, .1);
     position: absolute;
     bottom: 0;
   }

@@ -89,3 +89,17 @@ div.select-dropdown.dropdown-trigger {
   height: 3rem;
   width: 100%;
 }
+
+.workout_parameter {
+  background: #EEE;
+
+  input[type="text"],
+  input[type="number"] {
+    height: 1em;
+  }
+
+  .input-field {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}

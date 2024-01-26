@@ -126,27 +126,31 @@ pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> imp
     };
     leptos::view! {
         <Show when=move || { show() } fallback=|| { }>
-            <div
-                class="modal bottom-sheet"
-                style="z-index: 1003; display: block; opacity: 1; bottom: 0%"
-            >
                 <Form
                     action="/api/upload_fit_file"
                     method="POST"
                     enctype="multipart/form-data".to_string()
                     on:submit=on_submit
                 >
-                    <div
-                        class="modal-content">
+            <div
+                class="modal"
+                style="z-index: 1003;"
+            >
+                <div class="modal-header">
                         <h4 class="black-text">"Upload Fit File"</h4>
-                        <div class="row">
-                            <div class="col s12 input-field file-field">
-                                <div class="btn">
-                                    <span>File</span>
-                                    <input type="file" name="fit_file" multiple/>
-                                </div>
-                                <div class="file-path-wrapper">
-                                    <input class="file-path validate" type="text"/>
+                </div>
+                    <div class="modal-body">
+                        <div
+                            class="modal-content">
+                            <div class="row">
+                                <div class="col s12 input-field file-field">
+                                    <div class="btn">
+                                        <span>File</span>
+                                        <input type="file" name="fit_file" multiple/>
+                                    </div>
+                                    <div class="file-path-wrapper">
+                                        <input class="file-path validate" type="text"/>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -157,8 +161,8 @@ pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> imp
                             Upload
                         </button>
                     </div>
-                </Form>
             </div>
+                </Form>
             <div class="modal-overlay" style="z-index: 1002; display: block; opacity: 0.5;" on:click=move |_|{show_set(false)}></div>
         </Show>
     }

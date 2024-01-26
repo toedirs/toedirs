@@ -13,15 +13,17 @@ pub fn DatePickerRange(
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <div class="modal" {..attrs.clone()}>
-                <div class="modal-content">
-                    <div class="row">
-                        <div class="input-field col s6">
-                            <DatePicker value=from attr:id="from_date"/>
-                            <label for="from_date">From</label>
-                        </div>
-                        <div class="input-field col s6">
-                            <DatePicker value=to attr:id="to_date"/>
-                            <label for="to_date">To</label>
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="row">
+                            <div class="input-field col s6">
+                                <DatePicker value=from attr:id="from_date"/>
+                                <label for="from_date">From</label>
+                            </div>
+                            <div class="input-field col s6">
+                                <DatePicker value=to attr:id="to_date"/>
+                                <label for="to_date">To</label>
+                            </div>
                         </div>
                     </div>
                 </div>

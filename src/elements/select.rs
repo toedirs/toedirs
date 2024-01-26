@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
 use leptos::{html::Input, *};
+use leptos_use::on_click_outside;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlOptionElement;
 
 #[component]
 pub fn Select(
-    name: &'static str,
+    name: String,
     value: RwSignal<String>,
     options: Option<Vec<(String, String, bool)>>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
@@ -71,6 +72,9 @@ pub fn Select(
         })
         .collect_view();
     let dropdown_ref = create_node_ref::<Input>();
+    on_click_outside(dropdown_ref, move |_| {
+        show_dropdown.set(false);
+    });
     view! {
         <div class="select-wrapper">
             <div

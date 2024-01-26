@@ -150,160 +150,164 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
 
     view! {
         <Show when=move || { show() } fallback=|| {}>
-            <div
-                class="modal"
-                style="z-index: 1003; display: block; opacity: 1; top: 10%;overflow:scroll;"
+            <Form
+                action=""
+                on:submit=move |ev: SubmitEvent| {
+                    add_workout_action
+                        .dispatch(AddWorkout {
+                            workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
+                            start_date: start_date()
+                                .map(|d| {
+                                    Local
+                                        .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                                        .unwrap()
+                                })
+                                .unwrap(),
+                            rrule: repetition_rule.get().unwrap(),
+                        });
+                    show.set(false);
+                    ev.prevent_default();
+                }
             >
-                <Form
-                    action=""
-                    on:submit=move |ev: SubmitEvent| {
-                        add_workout_action
-                            .dispatch(AddWorkout {
-                                workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
-                                start_date: start_date()
-                                    .map(|d| {
-                                        Local
-                                            .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
-                                            .unwrap()
-                                    })
-                                    .unwrap(),
-                                rrule: repetition_rule.get().unwrap(),
-                            });
-                        show.set(false);
-                        ev.prevent_default();
-                    }
-                >
 
-                    <div class="modal-content" style="overflow:scroll;">
+                <div class="modal" style="z-index: 1003;">
+                    <div class="modal-header">
                         <h4 class="black-text">"Add workout to calendar"</h4>
-                        <div class="row"></div>
-                        <div class="row">
-                            <Suspense fallback=move || view! { "loading..." }>
-                                <div class="col s6 input-field">
-                                    // <select name="workout_type" id="workout_type">
-                                    {move || {
-                                        workout_templates
-                                            .get()
-                                            .map(|templates| {
-                                                let options = iter::once((
-                                                        "0".to_string(),
-                                                        "Choose workout template".to_string(),
-                                                        true,
-                                                    ))
-                                                    .chain(
-                                                        templates
-                                                            .iter()
-                                                            .map(|t| {
-                                                                (format!("{}", t.id), t.template_name.clone(), false)
-                                                            }),
-                                                    )
-                                                    .collect::<Vec<_>>();
-                                                view! {
-                                                    <Select
-                                                        value=workout_type
-                                                        name="workout_type"
-                                                        options=Some(options)
-                                                        attr:id="workout_templ"
-                                                    >
+                    </div>
+                    <div class="modal-body">
+                        <div class="modal-content" style="overflow:scroll;">
+                            <div class="row"></div>
+                            <div class="row">
+                                <Suspense fallback=move || view! { "loading..." }>
+                                    <div class="col s6 input-field">
+                                        // <select name="workout_type" id="workout_type">
+                                        {move || {
+                                            workout_templates
+                                                .get()
+                                                .map(|templates| {
+                                                    let options = iter::once((
+                                                            "0".to_string(),
+                                                            "Choose workout template".to_string(),
+                                                            true,
+                                                        ))
+                                                        .chain(
+                                                            templates
+                                                                .iter()
+                                                                .map(|t| {
+                                                                    (format!("{}", t.id), t.template_name.clone(), false)
+                                                                }),
+                                                        )
+                                                        .collect::<Vec<_>>();
+                                                    view! {
+                                                        <Select
+                                                            value=workout_type
+                                                            name="workout_type".to_string()
+                                                            options=Some(options)
+                                                            attr:id="workout_templ"
+                                                        >
 
-                                                        {}
-                                                    </Select>
-                                                    <label for="workout_templ">Workout Template</label>
-                                                }
-                                            })
+                                                            {}
+                                                        </Select>
+                                                        <label for="workout_templ">Workout Template</label>
+                                                    }
+                                                })
+                                        }}
+
+                                    </div>
+                                </Suspense>
+                            </div>
+                            <div class="row">
+                                <input value=repetition_rule/>
+                            </div>
+                            <div class="row">
+                                <div class="col s6 input-field">
+                                    <DatePicker value=start_date attr:id="start_date"/>
+                                    <label for="start_date">Start Date</label>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col s2 input-field valign-wrapper">
+                                    <span>"Repeat"</span>
+                                </div>
+                                <div class="col s2 input-field">
+                                    <Select
+                                        value=repetition_type
+                                        name="repetition_type".to_string()
+                                        options=None
+                                        attr:id="repetition_type"
+                                    >
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                    </Select>
+                                </div>
+                                <div class="col s2 input-field valign-wrapper">"every"</div>
+                                <div class="col s2 input-field">
+                                    <InputNumber value=repetition_frequency step=1/>
+                                </div>
+                                <div class="col s2 input-field valign-wrapper">
+                                    {move || match repetition_type.get().as_str() {
+                                        "weekly" => "weeks",
+                                        "daily" => "days",
+                                        _ => "months",
                                     }}
 
                                 </div>
-                            </Suspense>
-                        </div>
-                        <div class="row">
-                            <input value=repetition_rule/>
-                        </div>
-                        <div class="row">
-                            <div class="col s6 input-field">
-                                <DatePicker value=start_date attr:id="start_date"/>
-                                <label for="start_date">Start Date</label>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col s2 input-field valign-wrapper">
-                                <span>"Repeat"</span>
-                            </div>
-                            <div class="col s2 input-field">
-                                <Select
-                                    value=repetition_type
-                                    name="repetition_type"
-                                    options=None
-                                    attr:id="repetition_type"
-                                >
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
-                                </Select>
-                            </div>
-                            <div class="col s2 input-field valign-wrapper">"every"</div>
-                            <div class="col s2 input-field">
-                                <InputNumber value=repetition_frequency step=1/>
-                            </div>
-                            <div class="col s2 input-field valign-wrapper">
-                                {move || match repetition_type.get().as_str() {
-                                    "weekly" => "weeks",
-                                    "daily" => "days",
-                                    _ => "months",
-                                }}
-
-                            </div>
-                        </div>
-                        <Show when=move || { repetition_type.get() == "weekly" } fallback=|| {}>
-                            <div class="row">
-                                <div class="col s1">"On"</div>
-                                <div class="col s11">
-                                    <CheckboxGroup value=repetition_on_day>
-                                        <CheckboxItem label="Monday" key="monday"/>
-                                        <CheckboxItem label="Tuesday" key="tuesday"/>
-                                        <CheckboxItem label="Wednesday" key="wednesday"/>
-                                        <CheckboxItem label="Thursday" key="thursday"/>
-                                        <CheckboxItem label="Friday" key="friday"/>
-                                        <CheckboxItem label="Saturday" key="saturday"/>
-                                        <CheckboxItem label="Sunday" key="sunday"/>
-                                    </CheckboxGroup>
+                            <Show when=move || { repetition_type.get() == "weekly" } fallback=|| {}>
+                                <div class="row">
+                                    <div class="col s1">"On"</div>
+                                    <div class="col s11">
+                                        <CheckboxGroup value=repetition_on_day>
+                                            <CheckboxItem label="Monday" key="monday"/>
+                                            <CheckboxItem label="Tuesday" key="tuesday"/>
+                                            <CheckboxItem label="Wednesday" key="wednesday"/>
+                                            <CheckboxItem label="Thursday" key="thursday"/>
+                                            <CheckboxItem label="Friday" key="friday"/>
+                                            <CheckboxItem label="Saturday" key="saturday"/>
+                                            <CheckboxItem label="Sunday" key="sunday"/>
+                                        </CheckboxGroup>
+                                    </div>
                                 </div>
-                            </div>
-                        </Show>
-                        <Show when=move || { repetition_type.get() == "monthly" } fallback=|| {}>
-                            <div class="row">
-                                <div class="col s1">On day</div>
-                                <div class="col s3 input-field">
-                                    <InputNumber value=month_day step=1/>
+                            </Show>
+                            <Show
+                                when=move || { repetition_type.get() == "monthly" }
+                                fallback=|| {}
+                            >
+                                <div class="row">
+                                    <div class="col s1">On day</div>
+                                    <div class="col s3 input-field">
+                                        <InputNumber value=month_day step=1/>
+                                    </div>
                                 </div>
-                            </div>
-                        </Show>
-                        <div class="row">
-                            <div class="col s6 input-field">
-                                "End" <p>
-                                    <label>
-                                        <input
-                                            name="end"
-                                            type="radio"
-                                            on:click=move |_| end_type.set(EndType::Occurences)
-                                            checked
-                                        />
-                                        <span>
-                                            "After" <InputNumber value=occurences step=1/> "occurences"
-                                        </span>
-                                    </label>
-                                </p> <p>
-                                    <label>
-                                        <input
-                                            name="end"
-                                            type="radio"
-                                            on:click=move |_| end_type.set(EndType::EndDate)
-                                        />
-                                        <span>
-                                            "On date" <DatePicker value=end_date attr:id="end_date"/>
-                                        </span>
-                                    </label>
-                                </p>
+                            </Show>
+                            <div class="row">
+                                <div class="col s6 input-field">
+                                    "End" <p>
+                                        <label>
+                                            <input
+                                                name="end"
+                                                type="radio"
+                                                on:click=move |_| end_type.set(EndType::Occurences)
+                                                checked
+                                            />
+                                            <span>
+                                                "After" <InputNumber value=occurences step=1/> "occurences"
+                                            </span>
+                                        </label>
+                                    </p> <p>
+                                        <label>
+                                            <input
+                                                name="end"
+                                                type="radio"
+                                                on:click=move |_| end_type.set(EndType::EndDate)
+                                            />
+                                            <span>
+                                                "On date" <DatePicker value=end_date attr:id="end_date"/>
+                                            </span>
+                                        </label>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -313,8 +317,8 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                             Add
                         </button>
                     </div>
-                </Form>
-            </div>
+                </div>
+            </Form>
             <div
                 class="modal-overlay"
                 style="z-index: 1002; display: block; opacity: 0.5;"
