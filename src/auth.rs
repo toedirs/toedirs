@@ -157,7 +157,7 @@ pub async fn login(
 
     let user: User = User::get_from_username(username, &pool)
         .await
-        .ok_or_else(|| ServerFnError::ServerError("User does not exist.".into()))?;
+        .ok_or_else(|| ServerFnError::new("User does not exist."))?;
 
     match verify(password, &user.password)? {
         true => {
@@ -166,9 +166,7 @@ pub async fn login(
             leptos_axum::redirect("/");
             Ok(())
         }
-        false => Err(ServerFnError::ServerError(
-            "Password does not match.".to_string(),
-        )),
+        false => Err(ServerFnError::new("Password does not match.".to_string())),
     }
 }
 
@@ -183,9 +181,7 @@ pub async fn signup(
     let auth = auth()?;
 
     if password != password_confirmation {
-        return Err(ServerFnError::ServerError(
-            "Passwords did not match.".to_string(),
-        ));
+        return Err(ServerFnError::new("Passwords did not match.".to_string()));
     }
 
     let password_hashed = hash(password, DEFAULT_COST).unwrap();
@@ -198,7 +194,7 @@ pub async fn signup(
 
     let user = User::get_from_username(username, &pool)
         .await
-        .ok_or_else(|| ServerFnError::ServerError("Signup failed: User does not exist.".into()))?;
+        .ok_or_else(|| ServerFnError::new("Signup failed: User does not exist."))?;
 
     auth.login_user(user.id);
     auth.remember_user(remember.is_some());

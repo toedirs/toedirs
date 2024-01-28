@@ -19,7 +19,7 @@ pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnErr
     let auth = auth()?;
     let user = auth
         .current_user
-        .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
     let templates = sqlx::query_as!(
         WorkoutTemplate,
         r#"
@@ -46,7 +46,7 @@ pub async fn add_workout(
     let auth = auth()?;
     let user = auth
         .current_user
-        .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
     sqlx::query!(
         r#"INSERT INTO workout_instances (user_id, workout_template_id, start_date, rrule)
         VALUES ($1,$2,$3,$4)
@@ -58,7 +58,7 @@ pub async fn add_workout(
     )
     .execute(&pool)
     .await
-    .map_err(|e| ServerFnError::ServerError(format!("Error saving workout template: {}", e)))?;
+    .map_err(|e| ServerFnError::new(format!("Error saving workout template: {}", e)))?;
     Ok(())
 }
 

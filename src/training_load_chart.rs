@@ -41,7 +41,7 @@ pub async fn training_load_action(
 ) -> Result<Vec<TrainingLoad>, ServerFnError> {
     let auth = auth()?;
     if auth.current_user.is_none() {
-        return Err(ServerFnError::ServerError("Not logged in".to_string()));
+        return Err(ServerFnError::new("Not logged in".to_string()));
     }
     let user = auth.current_user.expect("the user to be logged in");
     let pool = pool()?;

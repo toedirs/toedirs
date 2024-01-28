@@ -18,19 +18,16 @@ cfg_if! {
         use sentry::integrations::tower::{NewSentryLayer};
     }
 }
-#[cfg(feature = "ssr")]
+
 async fn server_fn_handler(
     State(app_state): State<AppState>,
     auth_session: AuthSession,
     path: Path<String>,
-    headers: HeaderMap,
-    raw_query: RawQuery,
     request: Request<AxumBody>,
 ) -> impl IntoResponse {
+    log!("{:?}", path);
+
     handle_server_fns_with_context(
-        path,
-        headers,
-        raw_query,
         move || {
             provide_context(auth_session.clone());
             provide_context(app_state.pool.clone());
@@ -39,19 +36,21 @@ async fn server_fn_handler(
     )
     .await
 }
+
 #[cfg(feature = "ssr")]
 async fn leptos_routes_handler(
     auth_session: AuthSession,
     State(app_state): State<AppState>,
     req: Request<AxumBody>,
 ) -> Response {
-    let handler = leptos_axum::render_app_to_stream_with_context(
+    let handler = leptos_axum::render_route_with_context(
         app_state.leptos_options.clone(),
+        app_state.routes.clone(),
         move || {
             provide_context(auth_session.clone());
             provide_context(app_state.pool.clone());
         },
-        || view! { <App/> },
+        App,
     );
     handler(req).await.into_response()
 }
@@ -87,7 +86,7 @@ async fn main() {
     let conf = get_configuration(None).await.unwrap();
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
-    let routes = generate_route_list(|| view! { <App/> });
+    let routes = generate_route_list(App);
     let app_state = AppState {
         leptos_options,
         pool: pool.clone(),
@@ -114,8 +113,8 @@ async fn main() {
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
     log!("listening on http://{}", &addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    axum::serve(listener, app.into_make_service())
         .await
         .unwrap();
 }

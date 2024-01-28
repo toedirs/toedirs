@@ -19,7 +19,7 @@ pub struct ActivityListEntry {
 pub async fn get_activity_list() -> Result<Vec<ActivityListEntry>, ServerFnError> {
     let auth = auth()?;
     if auth.current_user.is_none() {
-        return Err(ServerFnError::ServerError("Not logged in".to_string()));
+        return Err(ServerFnError::new("Not logged in".to_string()));
     }
     let user = auth.current_user.unwrap();
     let pool = pool()?;

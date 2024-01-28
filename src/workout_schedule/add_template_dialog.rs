@@ -2,6 +2,7 @@
 use crate::app::{auth, pool};
 use leptos::{ev::SubmitEvent, logging::log, *};
 use leptos_router::*;
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{postgres::*, *};
 use strum;
@@ -41,7 +42,7 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
             <input
                 type="hidden"
                 name=move || format!("param[{}][order]", param.key)
-                value=param.order.read_only()
+                value=param.order
             />
 
             <div class="col s12">
@@ -83,13 +84,16 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
                             Scaling
                             <input
                                 type="checkbox"
-                                name=move || format!("param[{}][scaling]", param.key)
                                 checked=param.scaling
                                 on:change=move |_| {
                                     param.scaling.update(|v| *v = !*v);
                                 }
                             />
-                            <span class="lever"></span>
+                            <input
+                                type="hidden"
+                                name=move || format!("param[{}][scaling]", param.key)
+                                value=move || if param.scaling.get() { "true" } else { "false" }
+                            /> <span class="lever"></span>
                         </label>
                     </div>
                 </div>
@@ -98,13 +102,26 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
     }
 }
 
-#[server(CreateWorkout, "/api")]
-pub async fn create_workout(name: String, workout_type: String) -> Result<(), ServerFnError> {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkoutParam {
+    name: String,
+    value: u32,
+    param_type: String,
+    scaling: bool,
+    order: u32,
+}
+
+#[server]
+pub async fn create_workout(
+    name: String,
+    workout_type: String,
+    param: Vec<WorkoutParam>,
+) -> Result<(), ServerFnError> {
     let pool = pool()?;
     let auth = auth()?;
     let user = auth
         .current_user
-        .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
     sqlx::query!(
         r#"
         INSERT INTO workout_templates (user_id, template_name, workout_type)
@@ -113,12 +130,12 @@ pub async fn create_workout(name: String, workout_type: String) -> Result<(), Se
         user.id as _,
         name,
         TryInto::<WorkoutType>::try_into(workout_type)
-            .map_err(|_| ServerFnError::ServerError("Couldn't parse workout type".to_string()))?
+            .map_err(|_| ServerFnError::new("Couldn't parse workout type".to_string()))?
             as _
     )
     .execute(&pool)
     .await
-    .map_err(|e| ServerFnError::ServerError(format!("Error saving workout template: {}", e)))?;
+    .map_err(|e| ServerFnError::new(format!("Error saving workout template: {}", e)))?;
     Ok(())
 }
 
@@ -130,8 +147,11 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     let workout_parameters = create_rw_signal(vec![Parameter::default()]);
     let on_submit = move |ev: SubmitEvent| {
         log!("{:?}", ev);
+        let data = CreateWorkout::from_event(&ev);
+        log!("{:?}", data);
         show.set(false);
     };
+    let owner = Owner::current().unwrap();
     watch(
         move || show.get(),
         move |cur, prev, _| {
@@ -146,22 +166,14 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         move || workout_parameter_index.get(),
         move |num, _, _| {
             workout_parameters.update(|v| {
-                v.push(Parameter {
-                    key: *num,
-                    order: create_rw_signal(*num),
-                    ..Default::default()
+                with_owner(owner, move || {
+                    v.push(Parameter {
+                        key: *num,
+                        order: create_rw_signal(*num),
+                        ..Default::default()
+                    });
                 });
             });
-        },
-        false,
-    );
-    watch(
-        move || workout_parameters.get(),
-        move |v, _, _| {
-            for i in 0..v.len() {
-                log!("{:?}:{}", v[i], i);
-                v[i].order.set(i as u32);
-            }
         },
         false,
     );
@@ -333,6 +345,9 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                                 .unwrap();
                                                             let el = v.remove(src_index);
                                                             v.insert(tgt_index, el);
+                                                            for i in 0..v.len() {
+                                                                v[i].order.set(i as u32);
+                                                            }
                                                         });
                                                 }
                                             />

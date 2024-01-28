@@ -185,7 +185,7 @@ pub async fn get_workout_instances(
     let auth = auth()?;
     let user = auth
         .current_user
-        .ok_or(ServerFnError::ServerError("Not logged in".to_string()))?;
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
     // use this once `as` is supported in record types
     // let rrules: Vec<WorkoutInstance> = sqlx::query_as!(
     //     WorkoutInstance,

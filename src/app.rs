@@ -19,12 +19,12 @@ if #[cfg(feature = "ssr")] {
 
         pub fn pool() -> Result<PgPool, ServerFnError> {
            use_context::<PgPool>()
-                .ok_or_else(|| ServerFnError::ServerError("Pool missing.".into()))
+                .ok_or_else(|| ServerFnError::new("Pool missing."))
         }
 
         pub fn auth() -> Result<AuthSession, ServerFnError> {
             use_context::<AuthSession>()
-                .ok_or_else(|| ServerFnError::ServerError("Auth session missing.".into()))
+                .ok_or_else(|| ServerFnError::new("Auth session missing."))
         }
     }
 }

@@ -6,6 +6,7 @@ pub mod config;
 pub mod date_picker_dialog;
 pub mod elements;
 pub mod error_template;
+#[cfg(feature = "ssr")]
 pub mod fileserv;
 pub mod fit_upload;
 pub mod heartrate_summary_chart;
