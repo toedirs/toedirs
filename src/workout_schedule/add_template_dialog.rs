@@ -11,13 +11,14 @@ use web_sys::{DragEvent, HtmlElement};
 
 use crate::{elements::select::Select, workout_schedule::WorkoutType};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Parameter {
     key: u32,
     name: RwSignal<String>,
     value: RwSignal<u32>,
     param_type: RwSignal<String>,
     scaling: RwSignal<bool>,
+    order: RwSignal<u32>,
 }
 
 impl Default for Parameter {
@@ -28,6 +29,7 @@ impl Default for Parameter {
             value: create_rw_signal(1),
             param_type: create_rw_signal("time".to_string()),
             scaling: create_rw_signal(false),
+            order: create_rw_signal(0),
         }
     }
 }
@@ -36,6 +38,11 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
     let select_name = format!("param[{}][param_type]", param.key).to_string();
     view! {
         <div class="row workout-parameter" draggable="true">
+            <input
+                type="hidden"
+                name=move || format!("param[{}][order]", param.key)
+                value=param.order.read_only()
+            />
 
             <div class="col s12">
                 <div class="row">
@@ -117,13 +124,14 @@ pub async fn create_workout(name: String, workout_type: String) -> Result<(), Se
 
 #[component]
 pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
-    let on_submit = move |_ev: SubmitEvent| {
-        show.set(false);
-    };
     let select_value = create_rw_signal("".to_string());
     let create_workout_action = create_server_action::<CreateWorkout>();
     let workout_parameter_index = create_rw_signal(0);
     let workout_parameters = create_rw_signal(vec![Parameter::default()]);
+    let on_submit = move |ev: SubmitEvent| {
+        log!("{:?}", ev);
+        show.set(false);
+    };
     watch(
         move || show.get(),
         move |cur, prev, _| {
@@ -140,9 +148,20 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
             workout_parameters.update(|v| {
                 v.push(Parameter {
                     key: *num,
+                    order: create_rw_signal(*num),
                     ..Default::default()
-                })
+                });
             });
+        },
+        false,
+    );
+    watch(
+        move || workout_parameters.get(),
+        move |v, _, _| {
+            for i in 0..v.len() {
+                log!("{:?}:{}", v[i], i);
+                v[i].order.set(i as u32);
+            }
         },
         false,
     );
