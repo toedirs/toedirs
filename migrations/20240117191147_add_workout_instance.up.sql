@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS workout_parameter (
     name text NOT NULL,
     parameter_type workout_parameter_type NOT NULL,
     value integer NOT NULL,
-    scaling boolean NOT NULL DEFAULT TRUE
+    scaling boolean NOT NULL DEFAULT TRUE,
+    position integer NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS parameter_link (

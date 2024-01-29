@@ -1,5 +1,6 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
+use itertools::Itertools;
 use leptos::{ev::SubmitEvent, logging::log, *};
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,7 @@ impl Default for Parameter {
             key: 0,
             name: create_rw_signal("".to_string()),
             value: create_rw_signal(1),
-            param_type: create_rw_signal("time".to_string()),
+            param_type: create_rw_signal("time_s".to_string()),
             scaling: create_rw_signal(false),
             order: create_rw_signal(0),
         }
@@ -41,7 +42,7 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
         <div class="row workout-parameter" draggable="true">
             <input
                 type="hidden"
-                name=move || format!("param[{}][order]", param.key)
+                name=move || format!("param[{}][position]", param.key)
                 value=param.order
             />
 
@@ -74,12 +75,17 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
                             options=None
                             attr:id="parameter_type"
                         >
-                            <option value="time">Time</option>
-                            <option value="distance">Distance(m)</option>
+                            <option value="time_s">Time</option>
+                            <option value="distance_m">Distance(m)</option>
                             <option value="trainingload">TrainingLoad</option>
                         </Select>
                     </div>
                     <div class="col s4 switch">
+                        <input
+                            type="hidden"
+                            name=move || format!("param[{}][scaling]", param.key)
+                            value=move || if param.scaling.get() { "true" } else { "false" }
+                        />
                         <label>
                             Scaling
                             <input
@@ -89,11 +95,7 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
                                     param.scaling.update(|v| *v = !*v);
                                 }
                             />
-                            <input
-                                type="hidden"
-                                name=move || format!("param[{}][scaling]", param.key)
-                                value=move || if param.scaling.get() { "true" } else { "false" }
-                            /> <span class="lever"></span>
+                            <span class="lever"></span>
                         </label>
                     </div>
                 </div>
@@ -105,10 +107,10 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkoutParam {
     name: String,
-    value: u32,
+    value: i32,
     param_type: String,
     scaling: bool,
-    order: u32,
+    position: i32,
 }
 
 #[server]
@@ -122,10 +124,11 @@ pub async fn create_workout(
     let user = auth
         .current_user
         .ok_or(ServerFnError::new("Not logged in".to_string()))?;
-    sqlx::query!(
+    let result = sqlx::query!(
         r#"
         INSERT INTO workout_templates (user_id, template_name, workout_type)
         VALUES ($1, $2,$3)
+        RETURNING id
         "#,
         user.id as _,
         name,
@@ -133,9 +136,32 @@ pub async fn create_workout(
             .map_err(|_| ServerFnError::new("Couldn't parse workout type".to_string()))?
             as _
     )
-    .execute(&pool)
+    .fetch_one(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Error saving workout template: {}", e)))?;
+    let template_ids: Vec<i64> = std::iter::repeat(result.id).take(param.len()).collect();
+    let (names, types, values, scalings, positions): (Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>) =
+        param
+            .into_iter()
+            .map(|p| (p.name, p.param_type, p.value, p.scaling, p.position))
+            .multiunzip();
+    sqlx::query!(
+        r#"
+        INSERT INTO workout_parameter(workout_template_id,name,parameter_type,value,scaling,position)
+        SELECT *
+        FROM UNNEST($1::bigint[], $2::text[], $3::workout_parameter_type[], $4::integer[], $5::boolean[], $6::integer[])
+        "#,
+        &template_ids[..],
+        &names[..],
+        &types[..] as _,
+        &values[..] as _,
+        &scalings[..],
+        &positions
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Couldn't insert workout parameters: {}", e)))?;
+
     Ok(())
 }
 
