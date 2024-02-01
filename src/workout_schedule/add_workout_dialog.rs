@@ -1,4 +1,4 @@
-use std::{collections::HashSet, iter};
+use std::{collections::HashSet, error::Error, iter};
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
@@ -6,12 +6,91 @@ use chrono::{DateTime, Local, TimeZone, Weekday};
 use leptos::{ev::SubmitEvent, *};
 use leptos_router::*;
 use rrule::{NWeekday, RRule, Tz};
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{postgres::*, *};
 use strum;
 use thaw::*;
 
-use crate::{elements::select::Select, workout_schedule::WorkoutTemplate};
+use crate::elements::select::Select;
+
+use super::WorkoutType;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+// #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct WorkoutParameter {
+    pub id: i64,
+    pub name: String,
+    pub value: i32,
+    pub parameter_type: String,
+    pub scaling: bool,
+    pub position: i32,
+}
+#[cfg(feature = "ssr")]
+impl sqlx::Type<Postgres> for WorkoutParameter {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("workout_parameter")
+    }
+}
+#[cfg(feature = "ssr")]
+impl<'r> Decode<'r, Postgres> for WorkoutParameter {
+    fn decode(value: PgValueRef<'r>) -> Result<Self, Box<dyn Error + 'static + Send + Sync>> {
+        let mut decoder = postgres::types::PgRecordDecoder::new(value)?;
+        let id = decoder.try_decode::<i64>()?;
+        let name = decoder.try_decode::<String>()?;
+        let val = decoder.try_decode::<i32>()?;
+        let parameter_type = decoder.try_decode::<String>()?;
+        let scaling = decoder.try_decode::<bool>()?;
+        let position = decoder.try_decode::<i32>()?;
+        Ok(Self {
+            id,
+            name,
+            value: val,
+            parameter_type,
+            scaling,
+            position,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct WorkoutParameterArray(Vec<WorkoutParameter>);
+
+#[cfg(feature = "ssr")]
+impl sqlx::Type<Postgres> for WorkoutParameterArray {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("_workout_parameter")
+    }
+}
+#[cfg(feature = "ssr")]
+impl<'r> Decode<'r, Postgres> for WorkoutParameterArray {
+    fn decode(value: PgValueRef<'r>) -> Result<Self, Box<dyn Error + 'static + Send + Sync>> {
+        Ok(Self(Vec::<WorkoutParameter>::decode(value)?))
+    }
+}
+
+// #[cfg(feature = "ssr")]
+// impl PgHasArrayType for WorkoutParameter {
+//     fn array_type_info() -> PgTypeInfo {
+//         PgTypeInfo::with_name("_workout_parameter")
+//     }
+// }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type, sqlx::FromRow))]
+/// A template for a single workout, e.g. a bicycle ride or a weight session.
+/// Includes all the different steps involved.
+pub struct WorkoutTemplate {
+    /// unique id of the template.
+    pub id: i64,
+    /// user the template belongs to.
+    pub user_id: i32,
+    /// The unique name of this workout.
+    pub template_name: String,
+    /// the type of workout this is.
+    pub workout_type: WorkoutType, // /// The steps that make up this workout.
+    pub parameters: Option<WorkoutParameterArray>,
+}
 
 #[server(GetWorkoutTemplates, "/api")]
 pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnError> {
@@ -20,17 +99,19 @@ pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnErr
     let user = auth
         .current_user
         .ok_or(ServerFnError::new("Not logged in".to_string()))?;
-    let templates = sqlx::query_as!(
-        WorkoutTemplate,
+    let templates:Vec<WorkoutTemplate> = sqlx::query_as(
         r#"
         SELECT templates.id,
             templates.user_id,
             templates.template_name,
-            templates.workout_type as "workout_type: _" 
+            templates.workout_type,
+            ARRAY_AGG(ROW(params.id, params.name, params.value, params.parameter_type::TEXT, params.scaling, params.position)::workout_parameter) as "parameters" 
         FROM workout_templates as templates 
-        WHERE templates.user_id = $1::bigint"#,
-        user.id as _
+        INNER JOIN workout_parameter as params ON params.workout_template_id = templates.id
+        WHERE templates.user_id = $1::bigint
+        GROUP BY templates.id"#
     )
+        .bind(user.id)
     .fetch_all(&pool)
     .await?;
     Ok(templates)
