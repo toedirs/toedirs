@@ -3,12 +3,13 @@ use std::{collections::HashSet, error::Error, iter};
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 use chrono::{DateTime, Local, TimeZone, Weekday};
-use leptos::{ev::SubmitEvent, *};
+use leptos::{ev::SubmitEvent, logging::log, *};
 use leptos_router::*;
 use rrule::{NWeekday, RRule, Tz};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{postgres::*, *};
+use std::str::FromStr;
 use strum;
 use thaw::*;
 
@@ -17,7 +18,7 @@ use crate::elements::select::Select;
 use super::WorkoutType;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-// #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type))]
 pub struct WorkoutParameter {
     pub id: i64,
     pub name: String,
@@ -27,57 +28,13 @@ pub struct WorkoutParameter {
     pub position: i32,
 }
 #[cfg(feature = "ssr")]
-impl sqlx::Type<Postgres> for WorkoutParameter {
-    fn type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("workout_parameter")
+impl PgHasArrayType for WorkoutParameter {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("_record")
     }
 }
-#[cfg(feature = "ssr")]
-impl<'r> Decode<'r, Postgres> for WorkoutParameter {
-    fn decode(value: PgValueRef<'r>) -> Result<Self, Box<dyn Error + 'static + Send + Sync>> {
-        let mut decoder = postgres::types::PgRecordDecoder::new(value)?;
-        let id = decoder.try_decode::<i64>()?;
-        let name = decoder.try_decode::<String>()?;
-        let val = decoder.try_decode::<i32>()?;
-        let parameter_type = decoder.try_decode::<String>()?;
-        let scaling = decoder.try_decode::<bool>()?;
-        let position = decoder.try_decode::<i32>()?;
-        Ok(Self {
-            id,
-            name,
-            value: val,
-            parameter_type,
-            scaling,
-            position,
-        })
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct WorkoutParameterArray(Vec<WorkoutParameter>);
-
-#[cfg(feature = "ssr")]
-impl sqlx::Type<Postgres> for WorkoutParameterArray {
-    fn type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("_workout_parameter")
-    }
-}
-#[cfg(feature = "ssr")]
-impl<'r> Decode<'r, Postgres> for WorkoutParameterArray {
-    fn decode(value: PgValueRef<'r>) -> Result<Self, Box<dyn Error + 'static + Send + Sync>> {
-        Ok(Self(Vec::<WorkoutParameter>::decode(value)?))
-    }
-}
-
-// #[cfg(feature = "ssr")]
-// impl PgHasArrayType for WorkoutParameter {
-//     fn array_type_info() -> PgTypeInfo {
-//         PgTypeInfo::with_name("_workout_parameter")
-//     }
-// }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type, sqlx::FromRow))]
 /// A template for a single workout, e.g. a bicycle ride or a weight session.
 /// Includes all the different steps involved.
 pub struct WorkoutTemplate {
@@ -89,7 +46,20 @@ pub struct WorkoutTemplate {
     pub template_name: String,
     /// the type of workout this is.
     pub workout_type: WorkoutType, // /// The steps that make up this workout.
-    pub parameters: Option<WorkoutParameterArray>,
+    pub parameters: Vec<WorkoutParameter>,
+}
+
+#[cfg(feature = "ssr")]
+impl sqlx::FromRow<'_, PgRow> for WorkoutTemplate {
+    fn from_row(row: &PgRow) -> sqlx::Result<Self> {
+        Ok(Self {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            template_name: row.get("template_name"),
+            workout_type: WorkoutType::from_str(&row.get::<&str, _>("workout_type")).unwrap(),
+            parameters: row.get::<Vec<WorkoutParameter>, _>("parameters"),
+        })
+    }
 }
 
 #[server(GetWorkoutTemplates, "/api")]
@@ -104,8 +74,8 @@ pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnErr
         SELECT templates.id,
             templates.user_id,
             templates.template_name,
-            templates.workout_type,
-            ARRAY_AGG(ROW(params.id, params.name, params.value, params.parameter_type::TEXT, params.scaling, params.position)::workout_parameter) as "parameters" 
+            templates.workout_type::text,
+            ARRAY_AGG((params.id, params.name, params.value, params.parameter_type::TEXT, params.scaling, params.position) ORDER BY params.position) as "parameters" 
         FROM workout_templates as templates 
         INNER JOIN workout_parameter as params ON params.workout_template_id = templates.id
         WHERE templates.user_id = $1::bigint
@@ -296,6 +266,31 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
 
                                     </div>
                                 </Suspense>
+                            </div>
+                            <div class="row">
+                                <div class="col s12">
+                                    <Show
+                                        when=move || { workout_type.get() != "0" }
+                                        fallback=|| view! {}
+                                    >
+                                        <ul>
+                                            {move || {
+                                                workout_templates
+                                                    .get()
+                                                    .unwrap()
+                                                    .iter()
+                                                    .filter(|t| t.id.to_string() == workout_type.get())
+                                                    .next()
+                                                    .unwrap()
+                                                    .parameters
+                                                    .iter()
+                                                    .map(|p| view! { <li>{p.name.clone()}</li> })
+                                                    .collect_view()
+                                            }}
+
+                                        </ul>
+                                    </Show>
+                                </div>
                             </div>
                             <div class="row">
                                 <input value=repetition_rule/>
