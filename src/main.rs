@@ -11,7 +11,7 @@ cfg_if! {
         use toedirs::state::AppState;
         use toedirs::config::Config;
         use toedirs::fileserv::file_and_error_handler;
-        use sqlx::{PgPool, migrate, {postgres::{PgPoolOptions}}};
+        use sqlx::{PgPool,ConnectOptions, migrate, {postgres::{PgPoolOptions,PgConnectOptions}}};
 
         use axum_session::{SessionConfig, SessionLayer, SessionStore};
         use axum_session_auth::{AuthSessionLayer, AuthConfig, SessionPgPool};
@@ -58,13 +58,21 @@ async fn leptos_routes_handler(
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    use log::LevelFilter;
+
     Config::load();
     let config = Config::global();
     log!("connecting to db: {}", config.database_url);
+    let db_connect_options: PgConnectOptions = config
+        .database_url
+        .parse::<PgConnectOptions>()
+        .expect("unable to parse database url")
+        .log_statements(LevelFilter::Info);
 
     let pool = PgPoolOptions::new()
         .max_connections(50)
-        .connect(config.database_url.as_str())
+        // .connect(config.database_url.as_str())
+        .connect_with(db_connect_options)
         .await
         .expect("couldn't connect to database");
 

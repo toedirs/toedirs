@@ -9,7 +9,7 @@ use crate::workout_schedule::{
     add_template_dialog::CreateWorkoutDialog, add_workout_dialog::AddWorkoutDialog,
 };
 use chrono::{DateTime, Datelike, Days, Duration, IsoWeek, Local, NaiveDate, TimeZone, Weekday};
-use leptos::{html::Div, *};
+use leptos::{html::Div, logging::log, *};
 use leptos_router::*;
 use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
 use rrule::{RRule, RRuleSet, Tz, Unvalidated, Validated};
@@ -297,7 +297,7 @@ pub async fn get_workout_instances(
 pub struct WorkoutInstanceWithScaling {
     id: i64,
     parameters: Vec<WorkoutParameter>,
-    scaling: HashMap<(i32, i32), f64>,
+    scaling: HashMap<String, f64>,
 }
 #[server]
 pub async fn get_instance_steps_with_scaling(
@@ -324,14 +324,20 @@ pub async fn get_instance_steps_with_scaling(
             SUM(COALESCE((s.scaling+100)/100.0, 1.0)) OVER (ORDER BY EXTRACT(year FROM weeks.start),EXTRACT(week FROM weeks.start) )::float as scaling
         FROM weeks
         LEFT JOIN weekly_scaling s ON s.year=EXTRACT(year FROM weeks.start) and s.week=EXTRACT(week FROM weeks.start)
-        WHERE s.user_id=$3"#,
+        WHERE s.user_id IS NULL or s.user_id=$3"#,
         from,
         to,
         user.id as _
     ).fetch_all(&pool).await.map_err(|e|ServerFnError::new(format!("Couldn't load scaling: {}",e)))?;
-    let scaling: HashMap<(i32, i32), f64> = result
+    log!("scaling:{:?}", result);
+    let scaling: HashMap<String, f64> = result
         .iter()
-        .map(|r| ((r.year.unwrap(), r.week.unwrap()), r.scaling.unwrap()))
+        .map(|r| {
+            (
+                format!("{}-{}", r.year.unwrap(), r.week.unwrap()),
+                r.scaling.unwrap(),
+            )
+        })
         .collect();
     let result = sqlx::query!(
         r#"SELECT 
@@ -413,10 +419,13 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
         .unwrap();
     let mut workouts = HashMap::new();
     for instance in instances {
-        let steps_and_scaling =
-            get_instance_steps_with_scaling(instance.id, start.date(), end.date())
-                .await
-                .unwrap();
+        let steps_and_scaling = get_instance_steps_with_scaling(
+            instance.id,
+            instance.start_date.date_naive(),
+            end.date(),
+        )
+        .await
+        .unwrap();
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
             instance
                 .rrule
@@ -441,7 +450,8 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
                         (p.value as f64
                             * steps_and_scaling
                                 .scaling
-                                .get(&(
+                                .get(&format!(
+                                    "{}-{}",
                                     occurence.iso_week().year(),
                                     occurence.iso_week().week() as i32,
                                 ))
