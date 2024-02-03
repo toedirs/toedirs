@@ -14,7 +14,7 @@ CREATE TYPE workout_parameter_type AS ENUM (
     'trainingload'
 );
 
-CREATE TABLE IF NOT EXISTS workout_parameter (
+CREATE TABLE IF NOT EXISTS workout_parameters (
     id bigserial NOT NULL PRIMARY KEY,
     workout_template_id integer NOT NULL REFERENCES workout_templates (id) ON DELETE CASCADE,
     name text NOT NULL,
@@ -24,9 +24,9 @@ CREATE TABLE IF NOT EXISTS workout_parameter (
     position integer NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS parameter_link (
+CREATE TABLE IF NOT EXISTS parameter_links (
     instance_id integer NOT NULL REFERENCES workout_instances (id) ON DELETE CASCADE,
-    parameter_id integer NOT NULL REFERENCES workout_parameter (id) ON DELETE CASCADE,
+    parameter_id integer NOT NULL REFERENCES workout_parameters (id) ON DELETE CASCADE,
     value_override integer
 );
 

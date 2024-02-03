@@ -147,7 +147,7 @@ pub async fn create_workout(
             .multiunzip();
     sqlx::query!(
         r#"
-        INSERT INTO workout_parameter(workout_template_id,name,parameter_type,value,scaling,position)
+        INSERT INTO workout_parameters(workout_template_id,name,parameter_type,value,scaling,position)
         SELECT *
         FROM UNNEST($1::bigint[], $2::text[], $3::workout_parameter_type[], $4::integer[], $5::boolean[], $6::integer[])
         "#,

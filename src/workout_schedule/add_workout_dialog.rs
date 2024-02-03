@@ -82,7 +82,7 @@ pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnErr
             templates.workout_type::text,
             ARRAY_AGG((params.id, params.name, params.value, params.parameter_type::TEXT, params.scaling, params.position) ORDER BY params.position) as "parameters" 
         FROM workout_templates as templates 
-        INNER JOIN workout_parameter as params ON params.workout_template_id = templates.id
+        INNER JOIN workout_parameters as params ON params.workout_template_id = templates.id
         WHERE templates.user_id = $1::bigint
         GROUP BY templates.id"#
     )
@@ -129,7 +129,7 @@ pub async fn add_workout(
             let (param_ids, param_values): (Vec<_>, Vec<_>) =
                 param.iter().map(|p| (p.id, p.value)).multiunzip();
             sqlx::query!(
-                r#"INSERT INTO parameter_link
+                r#"INSERT INTO parameter_links
         SELECT *
         FROM UNNEST($1::bigint[],$2::bigint[], $3::int[])
         "#,

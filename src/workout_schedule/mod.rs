@@ -22,6 +22,8 @@ use thaw::*;
 
 use crate::elements::select::Select;
 
+use self::add_workout_dialog::WorkoutParameter;
+
 pub mod add_template_dialog;
 pub mod add_workout_dialog;
 
@@ -222,6 +224,7 @@ pub async fn set_week_scaling(year: i32, week: i32, scaling: i32) -> Result<(), 
     }
     Ok(())
 }
+
 #[server]
 pub async fn get_week_scaling(year: i32, week: i32) -> Result<i32, ServerFnError> {
     let pool = pool()?;
@@ -285,6 +288,82 @@ pub async fn get_workout_instances(
     .await?;
     Ok(rrules)
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkoutInstanceWithScaling {
+    id: i64,
+    parameters: Vec<WorkoutParameter>,
+    scaling: HashMap<(i32, i32), f64>,
+}
+#[server]
+pub async fn get_instance_steps_with_scaling(
+    instance_id: i64,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<WorkoutInstanceWithScaling, ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+    let result = sqlx::query!(
+        r#"WITH weeks as (
+            SELECT generate_series(
+                date_trunc('week', $1::date),
+                date_trunc('week', $2::date),
+                '1 week'
+            ) as start
+        )
+        SELECT
+            EXTRACT(year FROM weeks.start)::int as year,
+            EXTRACT(week FROM weeks.start)::int as week,
+            SUM(COALESCE((s.scaling+100)/100.0, 1.0)) OVER (ORDER BY EXTRACT(year FROM weeks.start),EXTRACT(week FROM weeks.start) )::float as scaling
+        FROM weeks
+        LEFT JOIN weekly_scaling s ON s.year=EXTRACT(year FROM weeks.start) and s.week=EXTRACT(week FROM weeks.start)
+        WHERE s.user_id=$3"#,
+        from,
+        to,
+        user.id as _
+    ).fetch_all(&pool).await.map_err(|e|ServerFnError::new(format!("Couldn't load scaling: {}",e)))?;
+    let scaling: HashMap<(i32, i32), f64> = result
+        .iter()
+        .map(|r| ((r.year.unwrap(), r.week.unwrap()), r.scaling.unwrap()))
+        .collect();
+    let result = sqlx::query!(
+        r#"SELECT 
+            p.id,
+            p.name,
+            COALESCE(l.value_override,p.value) as value,
+            p.parameter_type::text,
+            p.scaling,
+            p.position
+        FROM workout_instances i
+        INNER JOIN workout_templates t ON i.workout_template_id=t.id
+        INNER JOIN workout_parameters p ON p.workout_template_id=t.id
+        LEFT JOIN parameter_links l ON l.parameter_id=p.id
+        WHERE i.id=$1 and i.user_id=$2"#,
+        instance_id,
+        user.id as _
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Couldn't get workout parameters: {}", e)))?;
+    let parameters: Vec<_> = result
+        .iter()
+        .map(|r| WorkoutParameter {
+            id: r.id,
+            name: r.name.clone(),
+            value: r.value.expect("value not found on parameter"),
+            parameter_type: r.parameter_type.clone().unwrap(),
+            scaling: r.scaling,
+            position: r.position,
+        })
+        .collect();
+    Ok(WorkoutInstanceWithScaling {
+        id: instance_id,
+        parameters,
+        scaling,
+    })
+}
 
 #[derive(Debug, Clone)]
 pub struct WorkoutWeek {
@@ -316,6 +395,7 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
         .unwrap();
     let mut workouts = HashMap::new();
     for instance in instances {
+        let steps = get_instance_steps_with_scaling(instance.id, start.date(), end.date());
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
             instance
                 .rrule
@@ -346,13 +426,6 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
 pub fn WorkoutCalendar() -> impl IntoView {
     let today = Local::now();
     let weeks = create_rw_signal(Vec::<WorkoutWeek>::new());
-    // spawn_local(async move {
-    //     let mut week_entries: Vec<_> = Vec::new();
-    //     for w in 0..8 {
-    //         week_entries.push(get_week_workouts((today + Duration::weeks(w - 1)).iso_week()).await);
-    //     }
-    //     weeks.set(week_entries)
-    // });
     let calendar_list_el = create_node_ref::<Div>();
     let _ = use_infinite_scroll_with_options(
         calendar_list_el,
