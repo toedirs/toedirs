@@ -1,8 +1,13 @@
-use std::{collections::HashSet, error::Error, iter};
+use std::{
+    collections::{HashMap, HashSet},
+    error::Error,
+    iter,
+};
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 use chrono::{DateTime, Local, TimeZone, Weekday};
+use itertools::Itertools;
 use leptos::{ev::SubmitEvent, logging::log, *};
 use leptos_router::*;
 use rrule::{NWeekday, RRule, Tz};
@@ -87,29 +92,56 @@ pub async fn get_workout_templates() -> Result<Vec<WorkoutTemplate>, ServerFnErr
     Ok(templates)
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParameterOverride {
+    id: i64,
+    value: i32,
+}
+
 #[server(AddWorkout, "/api")]
 pub async fn add_workout(
     workout_type: i32,
     start_date: DateTime<Local>,
     rrule: String,
+    param: Option<Vec<ParameterOverride>>,
 ) -> Result<(), ServerFnError> {
     let pool = pool()?;
     let auth = auth()?;
     let user = auth
         .current_user
         .ok_or(ServerFnError::new("Not logged in".to_string()))?;
-    sqlx::query!(
+    let result = sqlx::query!(
         r#"INSERT INTO workout_instances (user_id, workout_template_id, start_date, rrule)
         VALUES ($1,$2,$3,$4)
+        RETURNING id
         "#,
         user.id as _,
         workout_type,
         start_date,
         rrule
     )
-    .execute(&pool)
+    .fetch_one(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Error saving workout template: {}", e)))?;
+    if let Some(param) = param {
+        if param.len() > 0 {
+            let instance_ids: Vec<i64> = std::iter::repeat(result.id).take(param.len()).collect();
+            let (param_ids, param_values): (Vec<_>, Vec<_>) =
+                param.iter().map(|p| (p.id, p.value)).multiunzip();
+            sqlx::query!(
+                r#"INSERT INTO parameter_link
+        SELECT *
+        FROM UNNEST($1::bigint[],$2::bigint[], $3::int[])
+        "#,
+                &instance_ids[..],
+                &param_ids[..],
+                &param_values[..]
+            )
+            .execute(&pool)
+            .await
+            .map_err(|e| ServerFnError::new(format!("Error saving parameter overrides:{}", e)))?;
+        }
+    }
     Ok(())
 }
 
@@ -129,6 +161,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         }
     });
     let workout_type = create_rw_signal("0".to_string());
+    let parameter_override = create_rw_signal(HashMap::<i64, i32>::new());
     let start_date = create_rw_signal(Some(Local::now().date_naive()));
     let end_date = create_rw_signal(Some(Local::now().date_naive()));
     let occurences = create_rw_signal(1);
@@ -215,9 +248,19 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                 })
                                 .unwrap(),
                             rrule: repetition_rule.get().unwrap(),
+                            param: Some(
+                                parameter_override
+                                    .get_untracked()
+                                    .iter()
+                                    .map(|(k, v)| ParameterOverride {
+                                        id: *k,
+                                        value: *v,
+                                    })
+                                    .collect::<Vec<_>>(),
+                            ),
                         });
-                    show.set(false);
                     ev.prevent_default();
+                    show.set(false);
                 }
             >
 
@@ -273,22 +316,56 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                         when=move || { workout_type.get() != "0" }
                                         fallback=|| view! {}
                                     >
-                                        <ul>
-                                            {move || {
-                                                workout_templates
-                                                    .get()
-                                                    .unwrap()
-                                                    .iter()
-                                                    .filter(|t| t.id.to_string() == workout_type.get())
-                                                    .next()
-                                                    .unwrap()
-                                                    .parameters
-                                                    .iter()
-                                                    .map(|p| view! { <li>{p.name.clone()}</li> })
-                                                    .collect_view()
-                                            }}
+                                        <h4>Steps</h4>
+                                        {move || {
+                                            workout_templates
+                                                .get()
+                                                .unwrap()
+                                                .iter()
+                                                .filter(|t| t.id.to_string() == workout_type.get())
+                                                .next()
+                                                .unwrap()
+                                                .parameters
+                                                .iter()
+                                                .enumerate()
+                                                .map(|(i, p)| {
+                                                    let pp = p.clone();
+                                                    view! {
+                                                        {if i != 0 {
+                                                            view! { <div class="divider"></div> }.into_view()
+                                                        } else {
+                                                            view! {}.into_view()
+                                                        }}
 
-                                        </ul>
+                                                        <div class="row">
+                                                            <div class="col s2">{p.name.clone()}</div>
+                                                            <div class="col s2">
+                                                                <input
+                                                                    type="number"
+                                                                    name=format!("param[{}][value]", i)
+                                                                    value=p.value
+                                                                    on:input=move |ev| {
+                                                                        parameter_override
+                                                                            .update(|h| {
+                                                                                let val = event_target_value(&ev).parse();
+                                                                                if let Ok(val) = val {
+                                                                                    h.entry(pp.id).and_modify(|v| *v = val).or_insert(val);
+                                                                                }
+                                                                            })
+                                                                    }
+                                                                />
+
+                                                            </div>
+                                                            <div class="col s2">{p.parameter_type.clone()}</div>
+                                                            <div class="col s2">
+                                                                {if p.scaling { "scaling" } else { "" }}
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                })
+                                                .collect_view()
+                                        }}
+
                                     </Show>
                                 </div>
                             </div>
