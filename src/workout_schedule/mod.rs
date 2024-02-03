@@ -27,7 +27,6 @@ use self::add_workout_dialog::WorkoutParameter;
 pub mod add_template_dialog;
 pub mod add_workout_dialog;
 
-pub trait WorkoutStep: std::fmt::Debug {}
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "ssr", derive(sqlx::Type, sqlx::FromRow))]
 /// A template for a single workout, e.g. a bicycle ride or a weight session.
@@ -131,7 +130,13 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                                 <div class="collection">
                                     {w
                                         .into_iter()
-                                        .map(|e| view! { <li class="collection-item">{e}</li> })
+                                        .map(|e| {
+                                            view! {
+                                                <li class="collection-item">
+                                                    {e.name.clone()} <br/> {format!("{:?}", e.steps)}
+                                                </li>
+                                            }
+                                        })
                                         .collect::<Vec<_>>()}
 
                                 </div>
@@ -366,9 +371,22 @@ pub async fn get_instance_steps_with_scaling(
 }
 
 #[derive(Debug, Clone)]
+pub struct WorkoutStep {
+    name: String,
+    value: i32,
+    param_type: String,
+    position: i32,
+}
+#[derive(Debug, Clone)]
+pub struct Workout {
+    name: String,
+    steps: Vec<WorkoutStep>,
+}
+
+#[derive(Debug, Clone)]
 pub struct WorkoutWeek {
     week: IsoWeek,
-    workouts: HashMap<Weekday, Vec<String>>,
+    workouts: HashMap<Weekday, Vec<Workout>>,
     scaling: i32,
 }
 async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
@@ -395,7 +413,10 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
         .unwrap();
     let mut workouts = HashMap::new();
     for instance in instances {
-        let steps = get_instance_steps_with_scaling(instance.id, start.date(), end.date());
+        let steps_and_scaling =
+            get_instance_steps_with_scaling(instance.id, start.date(), end.date())
+                .await
+                .unwrap();
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
             instance
                 .rrule
@@ -409,10 +430,36 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
             .before(Tz::LOCAL.from_local_datetime(end).unwrap())
             .all_unchecked();
         for occurence in occurences {
+            let steps: Vec<WorkoutStep> = steps_and_scaling
+                .parameters
+                .iter()
+                .map(|p| WorkoutStep {
+                    name: p.name.clone(),
+                    param_type: p.parameter_type.clone(),
+                    position: p.position,
+                    value: if p.scaling {
+                        (p.value as f64
+                            * steps_and_scaling
+                                .scaling
+                                .get(&(
+                                    occurence.iso_week().year(),
+                                    occurence.iso_week().week() as i32,
+                                ))
+                                .unwrap())
+                        .round() as i32
+                    } else {
+                        p.value
+                    },
+                })
+                .collect();
+            let workout = Workout {
+                name: instance.template.template_name.clone(),
+                steps,
+            };
             workouts
                 .entry(occurence.weekday())
-                .and_modify(|o: &mut Vec<_>| o.push(instance.template.template_name.clone()))
-                .or_insert(vec![instance.template.template_name.clone()]);
+                .and_modify(|o: &mut Vec<_>| o.push(workout.clone()))
+                .or_insert(vec![workout]);
         }
     }
     WorkoutWeek {
