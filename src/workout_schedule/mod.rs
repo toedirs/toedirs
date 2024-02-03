@@ -126,14 +126,44 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                         .workouts
                         .get(&day)
                         .map(|w| {
+                            let w = w.clone();
                             view! {
                                 <div class="collection">
                                     {w
                                         .into_iter()
                                         .map(|e| {
+                                            let show_info = create_rw_signal(false);
                                             view! {
-                                                <li class="collection-item">
-                                                    {e.name.clone()} <br/> {format!("{:?}", e.steps)}
+                                                <li class="collection-item center-align valign-wrapper">
+                                                    {e.name.clone()}
+                                                    <i
+                                                        class="material-symbols-rounded"
+                                                        on:mouseover=move |_| show_info.set(true)
+                                                        on:mouseout=move |_| show_info.set(false)
+                                                    >
+                                                        info
+                                                    </i> <Show when=move || { show_info() } fallback=|| {}>
+                                                        <div style="position:fixed;top:5%;background:white;width:500px;">
+
+                                                            {
+                                                                let mut steps = e.steps.clone();
+                                                                steps.sort_by(|a, b| a.position.cmp(&b.position));
+                                                                steps
+                                                                    .iter()
+                                                                    .map(|s| {
+                                                                        view! {
+                                                                            <div class="row">
+                                                                                <div class="col s3">{s.name.clone()}</div>
+                                                                                <div class="col s3">{s.value.clone()}</div>
+                                                                                <div class="col s3">{s.param_type.clone()}</div>
+                                                                            </div>
+                                                                        }
+                                                                    })
+                                                                    .collect::<Vec<_>>()
+                                                            }
+
+                                                        </div>
+                                                    </Show>
                                                 </li>
                                             }
                                         })
