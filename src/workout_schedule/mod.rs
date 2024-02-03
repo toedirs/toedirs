@@ -321,13 +321,23 @@ pub async fn get_instance_steps_with_scaling(
         SELECT
             EXTRACT(year FROM weeks.start)::int as year,
             EXTRACT(week FROM weeks.start)::int as week,
-            SUM(COALESCE((s.scaling+100)/100.0, 1.0)) OVER (ORDER BY EXTRACT(year FROM weeks.start),EXTRACT(week FROM weeks.start) )::float as scaling
+             SUM(COALESCE(s.scaling,0)) OVER (ORDER BY EXTRACT(year FROM weeks.start),EXTRACT(week FROM weeks.start) )::float as scaling
         FROM weeks
-        LEFT JOIN weekly_scaling s ON s.year=EXTRACT(year FROM weeks.start) and s.week=EXTRACT(week FROM weeks.start)
-        WHERE s.user_id IS NULL or s.user_id=$3"#,
+        LEFT JOIN (
+            SELECT year, week, user_id,
+                CASE WHEN year=$3 and week=$4 THEN -- ignore scaling on first week
+                    0
+                ELSE
+                    scaling
+                END as scaling
+            FROM weekly_scaling
+            ) s ON s.year=EXTRACT(year FROM weeks.start) and s.week=EXTRACT(week FROM weeks.start)
+        WHERE s.user_id IS NULL or s.user_id=$5"#,
         from,
         to,
-        user.id as _
+        from.iso_week().year() as _,
+        from.iso_week().week() as i32,
+        user.id as _,
     ).fetch_all(&pool).await.map_err(|e|ServerFnError::new(format!("Couldn't load scaling: {}",e)))?;
     log!("scaling:{:?}", result);
     let scaling: HashMap<String, f64> = result
@@ -335,7 +345,7 @@ pub async fn get_instance_steps_with_scaling(
         .map(|r| {
             (
                 format!("{}-{}", r.year.unwrap(), r.week.unwrap()),
-                r.scaling.unwrap(),
+                (r.scaling.unwrap() + 100.) / 100.,
             )
         })
         .collect();
@@ -419,13 +429,6 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
         .unwrap();
     let mut workouts = HashMap::new();
     for instance in instances {
-        let steps_and_scaling = get_instance_steps_with_scaling(
-            instance.id,
-            instance.start_date.date_naive(),
-            end.date(),
-        )
-        .await
-        .unwrap();
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
             instance
                 .rrule
@@ -434,6 +437,17 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
                 .validate(instance.start_date.with_timezone(&Tz::Local(Local)))
                 .unwrap(),
         );
+        let steps_and_scaling = get_instance_steps_with_scaling(
+            instance.id,
+            rrule
+                .into_iter()
+                .next()
+                .map(|d| d.date_naive())
+                .unwrap_or(instance.start_date.date_naive()),
+            end.date(),
+        )
+        .await
+        .unwrap();
         let occurences = rrule
             .after(Tz::LOCAL.from_local_datetime(start).unwrap())
             .before(Tz::LOCAL.from_local_datetime(end).unwrap())
