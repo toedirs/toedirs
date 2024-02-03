@@ -222,6 +222,33 @@ pub async fn set_week_scaling(year: i32, week: i32, scaling: i32) -> Result<(), 
     }
     Ok(())
 }
+#[server]
+pub async fn get_week_scaling(year: i32, week: i32) -> Result<i32, ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+
+    let result = sqlx::query!(
+        r#"
+            SELECT scaling
+            FROM weekly_scaling
+            WHERE user_id=$1::bigint and year=$2::int and week=$3::int
+        "#,
+        user.id as _,
+        year,
+        week
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Couldn't load weekly scaling: {}", e)))?;
+    if let Some(res) = result {
+        Ok(res.scaling)
+    } else {
+        Ok(0)
+    }
+}
 
 #[server(GetWorkoutInstances, "/api")]
 pub async fn get_workout_instances(
@@ -263,6 +290,7 @@ pub async fn get_workout_instances(
 pub struct WorkoutWeek {
     week: IsoWeek,
     workouts: HashMap<Weekday, Vec<String>>,
+    scaling: i32,
 }
 async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
     let start = &NaiveDate::from_isoywd_opt(week.year(), week.week(), Weekday::Mon)
@@ -283,6 +311,9 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
     )
     .await
     .unwrap();
+    let scaling = get_week_scaling(week.year(), week.week().try_into().unwrap())
+        .await
+        .unwrap();
     let mut workouts = HashMap::new();
     for instance in instances {
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
@@ -304,7 +335,11 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
                 .or_insert(vec![instance.template.template_name.clone()]);
         }
     }
-    WorkoutWeek { week, workouts }
+    WorkoutWeek {
+        week,
+        workouts,
+        scaling,
+    }
 }
 
 #[component]
@@ -432,30 +467,69 @@ pub fn WorkoutCalendar() -> impl IntoView {
                                     }
                                 >
 
-                                    <option value="-50">-50%</option>
-                                    <option value="-45">-45%</option>
-                                    <option value="-40">-40%</option>
-                                    <option value="-35">-35%</option>
-                                    <option value="-30">-30%</option>
-                                    <option value="-25">-25%</option>
-                                    <option value="-20">-20%</option>
-                                    <option value="-15">-15%</option>
-                                    <option value="-10">-10%</option>
-                                    <option value="-5">-5%</option>
-                                    <option value="0" selected>
+                                    <option value="-50" selected=item.scaling == -50>
+                                        -50%
+                                    </option>
+                                    <option value="-45" selected=item.scaling == -45>
+                                        -45%
+                                    </option>
+                                    <option value="-40" selected=item.scaling == -40>
+                                        -40%
+                                    </option>
+                                    <option value="-35" selected=item.scaling == -35>
+                                        -35%
+                                    </option>
+                                    <option value="-30" selected=item.scaling == -30>
+                                        -30%
+                                    </option>
+                                    <option value="-25" selected=item.scaling == -25>
+                                        -25%
+                                    </option>
+                                    <option value="-20" selected=item.scaling == -20>
+                                        -20%
+                                    </option>
+                                    <option value="-15" selected=item.scaling == -15>
+                                        -15%
+                                    </option>
+                                    <option value="-10" selected=item.scaling == -10>
+                                        -10%
+                                    </option>
+                                    <option value="-5" selected=item.scaling == -5>
+                                        -5%
+                                    </option>
+                                    <option value="0" selected=item.scaling == -0>
                                         0%
                                     </option>
-                                    <option value="5">5%</option>
-                                    <option value="10">10%</option>
-                                    <option value="15">15%</option>
-                                    <option value="20">20%</option>
-                                    <option value="25">25%</option>
-                                    <option value="25">25%</option>
-                                    <option value="30">30%</option>
-                                    <option value="35">35%</option>
-                                    <option value="40">40%</option>
-                                    <option value="45">45%</option>
-                                    <option value="50">50%</option>
+                                    <option value="5" selected=item.scaling == 5>
+                                        5%
+                                    </option>
+                                    <option value="10" selected=item.scaling == 10>
+                                        10%
+                                    </option>
+                                    <option value="15" selected=item.scaling == 15>
+                                        15%
+                                    </option>
+                                    <option value="20" selected=item.scaling == 20>
+                                        20%
+                                    </option>
+                                    <option value="25" selected=item.scaling == 25>
+                                        25%
+                                    </option>
+                                    <option value="30" selected=item.scaling == 30>
+                                        30%
+                                    </option>
+                                    <option value="35" selected=item.scaling == 35>
+                                        35%
+                                    </option>
+                                    <option value="40" selected=item.scaling == 40>
+                                        40%
+                                    </option>
+                                    <option value="45" selected=item.scaling == 45>
+                                        45%
+                                    </option>
+                                    <option value="50" selected=item.scaling == 50>
+                                        50%
+                                    </option>
                                 </select>
                             </div>
 
