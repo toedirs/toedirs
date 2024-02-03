@@ -176,6 +176,53 @@ impl sqlx::FromRow<'_, PgRow> for WorkoutInstance {
     }
 }
 
+#[server]
+pub async fn set_week_scaling(year: i32, week: i32, scaling: i32) -> Result<(), ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+    let result = sqlx::query!(
+        r#"
+            SELECT id
+            FROM weekly_scaling
+            WHERE user_id=$1::bigint and year=$2::int and week=$3::int
+        "#,
+        user.id as _,
+        year,
+        week
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Couldn't load weekly scaling: {}", e)))?;
+    if let Some(res) = result {
+        sqlx::query!(
+            r#"UPDATE weekly_scaling
+        SET scaling=$2
+        WHERE id=$1"#,
+            res.id,
+            scaling
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Couldn't update scaling: {}", e)))?;
+    } else {
+        sqlx::query!(
+            r#"INSERT INTO weekly_scaling (user_id, year, week,scaling)
+        VALUES ($1,$2,$3,$4)"#,
+            user.id as _,
+            year,
+            week,
+            scaling
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Couldn't save scaling: {}", e)))?;
+    }
+    Ok(())
+}
+
 #[server(GetWorkoutInstances, "/api")]
 pub async fn get_workout_instances(
     from: DateTime<Local>,
@@ -186,30 +233,6 @@ pub async fn get_workout_instances(
     let user = auth
         .current_user
         .ok_or(ServerFnError::new("Not logged in".to_string()))?;
-    // use this once `as` is supported in record types
-    // let rrules: Vec<WorkoutInstance> = sqlx::query_as!(
-    //     WorkoutInstance,
-    //     r#"
-    //         SELECT
-    //             i.id,
-    //             i.user_id,
-    //             i.start_date,
-    //             i.rrule,
-    //             i.active,
-    //             (
-    //                 t.id,
-    //                 t.user_id,
-    //                 t.template_name,
-    //                 t.workout_type as \"workout_type!: WorkoutType\"
-    //             ) as "template!: WorkoutTemplate"
-    //         FROM workout_instances i
-    //         INNER JOIN workout_templates t ON i.workout_template_id=t.id
-    //         WHERE i.user_id=$1::bigint
-    //     "#,
-    //     user.id as _
-    // )
-    // .fetch_all(&pool)
-    // .await?;
     let rrules: Vec<WorkoutInstance> = sqlx::query_as::<_, WorkoutInstance>(
         r#"
             SELECT 
@@ -261,7 +284,6 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
     .await
     .unwrap();
     let mut workouts = HashMap::new();
-    leptos::logging::log!("{:?} : {:?}", instances, start);
     for instance in instances {
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
             instance
@@ -341,6 +363,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
             d.set_scroll_top(1);
         }
     });
+    let set_scaling = create_server_action::<SetWeekScaling>();
     let action_button = create_node_ref::<Div>();
     let action_is_hovered = use_element_hover(action_button);
     let show_add_workout = create_rw_signal(false);
@@ -391,7 +414,50 @@ pub fn WorkoutCalendar() -> impl IntoView {
                             <WorkoutDay week=item.clone() today=today day=Weekday::Fri/>
                             <WorkoutDay week=item.clone() today=today day=Weekday::Sat/>
                             <WorkoutDay week=item.clone() today=today day=Weekday::Sun/>
-                            <div class="col s1 center-align">Load</div>
+                            <div class="col s1 center-align">
+                                <select
+                                    name=format!("load-{}-{}", item.week.year(), item.week.week())
+                                    id=format!("load-{}-{}", item.week.year(), item.week.week())
+                                    style="display:block;"
+                                    on:input=move |ev| {
+                                        let val = event_target_value(&ev).parse::<i32>();
+                                        if let Ok(val) = val {
+                                            set_scaling
+                                                .dispatch(SetWeekScaling {
+                                                    year: item.week.year(),
+                                                    week: item.week.week().try_into().unwrap(),
+                                                    scaling: val,
+                                                });
+                                        }
+                                    }
+                                >
+
+                                    <option value="-50">-50%</option>
+                                    <option value="-45">-45%</option>
+                                    <option value="-40">-40%</option>
+                                    <option value="-35">-35%</option>
+                                    <option value="-30">-30%</option>
+                                    <option value="-25">-25%</option>
+                                    <option value="-20">-20%</option>
+                                    <option value="-15">-15%</option>
+                                    <option value="-10">-10%</option>
+                                    <option value="-5">-5%</option>
+                                    <option value="0" selected>
+                                        0%
+                                    </option>
+                                    <option value="5">5%</option>
+                                    <option value="10">10%</option>
+                                    <option value="15">15%</option>
+                                    <option value="20">20%</option>
+                                    <option value="25">25%</option>
+                                    <option value="25">25%</option>
+                                    <option value="30">30%</option>
+                                    <option value="35">35%</option>
+                                    <option value="40">40%</option>
+                                    <option value="45">45%</option>
+                                    <option value="50">50%</option>
+                                </select>
+                            </div>
 
                         </div>
                     </For>

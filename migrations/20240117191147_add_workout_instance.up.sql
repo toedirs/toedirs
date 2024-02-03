@@ -30,3 +30,11 @@ CREATE TABLE IF NOT EXISTS parameter_link (
     value_override integer
 );
 
+CREATE TABLE IF NOT EXISTS weekly_scaling (
+    id bigserial NOT NULL PRIMARY KEY,
+    user_id integer NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    year integer NOT NULL,
+    week integer NOT NULL,
+    scaling integer NOT NULL DEFAULT 0
+);
+
