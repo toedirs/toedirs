@@ -49,7 +49,7 @@ wasm-bindgen = "^0.2.89"
 web-sys = {version="0.3.66",features=["DataTransfer"]}
 
 [patch.crates-io]
-thaw = { path = "../thaw/thaw"}
+thaw = {git="https://github.com/Panaetius/thaw"}#{ path = "../thaw/thaw"}
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_charts/hydrate","thaw/hydrate" ]
