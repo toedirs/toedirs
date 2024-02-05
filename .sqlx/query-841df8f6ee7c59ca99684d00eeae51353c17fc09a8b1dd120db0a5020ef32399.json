@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO workout_templates (user_id, template_name, workout_type)\n        VALUES ($1, $2,$3)\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        {
+          "Custom": {
+            "name": "workout_type",
+            "kind": {
+              "Enum": [
+                "run",
+                "strength",
+                "cycling",
+                "hiking",
+                "endurance"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "841df8f6ee7c59ca99684d00eeae51353c17fc09a8b1dd120db0a5020ef32399"
+}

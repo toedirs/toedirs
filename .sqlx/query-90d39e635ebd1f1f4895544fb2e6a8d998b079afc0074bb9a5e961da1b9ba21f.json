@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT \n            p.id,\n            p.name,\n            COALESCE(l.value_override,p.value) as value,\n            p.parameter_type::text,\n            p.scaling,\n            p.position\n        FROM workout_instances i\n        INNER JOIN workout_templates t ON i.workout_template_id=t.id\n        INNER JOIN workout_parameters p ON p.workout_template_id=t.id\n        LEFT JOIN parameter_links l ON l.parameter_id=p.id\n        WHERE i.id=$1 and i.user_id=$2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "value",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "parameter_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "scaling",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "position",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "90d39e635ebd1f1f4895544fb2e6a8d998b079afc0074bb9a5e961da1b9ba21f"
+}

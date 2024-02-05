@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO parameter_links\n        SELECT *\n        FROM UNNEST($1::bigint[],$2::bigint[], $3::int[])\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int8Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a661c4c4034654e4f39e20d6642168fc88d9e496bf232f5efebc54be95be25a7"
+}
