@@ -323,7 +323,7 @@ pub async fn get_week_scaling(year: i32, week: i32) -> Result<i32, ServerFnError
     }
 }
 
-#[server(GetWorkoutInstances, "/api")]
+#[server]
 pub async fn get_workout_instances(
     from: DateTime<Local>,
     to: DateTime<Local>,
