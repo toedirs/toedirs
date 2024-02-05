@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT \n            p.id,\n            p.name,\n            COALESCE(l.value_override,p.value) as value,\n            p.parameter_type::text,\n            p.scaling,\n            p.position\n        FROM workout_instances i\n        INNER JOIN workout_templates t ON i.workout_template_id=t.id\n        INNER JOIN workout_parameters p ON p.workout_template_id=t.id\n        LEFT JOIN parameter_links l ON l.parameter_id=p.id\n        WHERE i.id=$1 and i.user_id=$2",
+  "query": "SELECT \n            p.id,\n            p.name,\n            COALESCE(l.value_override,p.value) as value,\n            p.parameter_type::text,\n            p.scaling,\n            p.position\n        FROM workout_instances i\n        INNER JOIN workout_templates t ON i.workout_template_id=t.id\n        INNER JOIN workout_parameters p ON p.workout_template_id=t.id\n        LEFT JOIN parameter_links l ON l.parameter_id=p.id and l.instance_id=i.id\n        WHERE i.id=$1 and i.user_id=$2",
   "describe": {
     "columns": [
       {
@@ -49,5 +49,5 @@
       false
     ]
   },
-  "hash": "90d39e635ebd1f1f4895544fb2e6a8d998b079afc0074bb9a5e961da1b9ba21f"
+  "hash": "9946dfb6797d37e3c6b6f4329eb9b9224a45856c3e05ac9fef4b809ae4737321"
 }

@@ -425,7 +425,7 @@ pub async fn get_instance_steps_with_scaling(
         FROM workout_instances i
         INNER JOIN workout_templates t ON i.workout_template_id=t.id
         INNER JOIN workout_parameters p ON p.workout_template_id=t.id
-        LEFT JOIN parameter_links l ON l.parameter_id=p.id
+        LEFT JOIN parameter_links l ON l.parameter_id=p.id and l.instance_id=i.id
         WHERE i.id=$1 and i.user_id=$2"#,
         instance_id,
         user.id as _
