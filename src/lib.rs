@@ -3,7 +3,6 @@ pub mod activity_list;
 pub mod app;
 pub mod auth;
 pub mod config;
-pub mod date_picker_dialog;
 pub mod elements;
 pub mod error_template;
 #[cfg(feature = "ssr")]

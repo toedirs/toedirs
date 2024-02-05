@@ -1,13 +1,12 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 use itertools::Itertools;
-use leptos::{ev::SubmitEvent, logging::log, *};
+use leptos::{ev::SubmitEvent, html::Label, logging::log, *};
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{postgres::*, *};
 use strum;
-use thaw::*;
 use wasm_bindgen::JsCast;
 use web_sys::{DragEvent, HtmlElement};
 
@@ -56,6 +55,7 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
                             type="text"
                             value=param.name
                         />
+
                     </div>
                 </div>
                 <div class="row">
@@ -203,6 +203,7 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         },
         false,
     );
+    let name_ref = create_node_ref::<Label>();
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <ActionForm action=create_workout_action on:submit=on_submit>
@@ -215,8 +216,28 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                         <div class="modal-content">
                             <div class="row">
                                 <div class="col s6 input-field">
-                                    <input id="name" name="name" type="text"/>
-                                    <label for="name">Name</label>
+                                    <input
+                                        id="name"
+                                        name="name"
+                                        type="text"
+                                        on:focusin=move |_| {
+                                            name_ref.get_untracked().unwrap().classes("active");
+                                        }
+
+                                        on:focusout=move |ev| {
+                                            if event_target_value(&ev).len() == 0 {
+                                                name_ref
+                                                    .get_untracked()
+                                                    .unwrap()
+                                                    .class_list()
+                                                    .remove_1("active");
+                                            }
+                                        }
+                                    />
+
+                                    <label ref=name_ref for="name">
+                                        Name
+                                    </label>
                                 </div>
                             </div>
                             <div class="row">

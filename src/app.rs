@@ -7,11 +7,10 @@ use crate::{
     training_load_chart::TrainingLoadChart,
     workout_schedule::WorkoutCalendar,
 };
-use chrono::{Duration, Local, TimeZone};
+use chrono::{Duration, Local, NaiveDate, NaiveDateTime, TimeZone};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use thaw::*;
 
 cfg_if::cfg_if! {
 if #[cfg(feature = "ssr")] {
@@ -164,31 +163,66 @@ pub fn App() -> impl IntoView {
 #[component]
 fn Overview() -> impl IntoView {
     //overview page
-    let from_date = create_rw_signal(Some((Local::now() - Duration::days(120)).date_naive()));
-    let to_date = create_rw_signal(Some(Local::now().date_naive()));
+    let from_date = create_rw_signal(Some(
+        (Local::now() - Duration::days(120))
+            .date_naive()
+            .format("%Y-%m-%d")
+            .to_string(),
+    ));
+    let to_date = create_rw_signal(Some(
+        Local::now().date_naive().format("%Y-%m-%d").to_string(),
+    ));
     let from_memo = create_memo(move |_| {
-        from_date().map(|d| {
-            Local
-                .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
-                .unwrap()
+        from_date().and_then(|d| {
+            NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
+                .map(|d| {
+                    Local
+                        .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                        .unwrap()
+                })
+                .ok()
         })
     });
     let to_memo = create_memo(move |_| {
-        to_date().map(|d| {
-            Local
-                .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
-                .unwrap()
+        to_date().and_then(|d| {
+            NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
+                .map(|d| {
+                    Local
+                        .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                        .unwrap()
+                })
+                .ok()
         })
     });
     view! {
         <div class="container">
             <div class="row">
                 <div class="col s6">
-                    <DatePicker value=from_date attr:id="from_date"/>
+                    <input
+                        type="date"
+                        value=from_date
+                        on:change=move |ev| {
+                            from_date
+                                .update(|v| {
+                                    *v = Some(event_target_value(&ev));
+                                })
+                        }
+                    />
+
                     <label for="from_date">From</label>
                 </div>
                 <div class="col s6">
-                    <DatePicker value=to_date attr:id="to_date"/>
+                    <input
+                        type="date"
+                        value=to_date
+                        on:change=move |ev| {
+                            to_date
+                                .update(|v| {
+                                    *v = Some(event_target_value(&ev));
+                                })
+                        }
+                    />
+
                     <label for="to_date">To</label>
                 </div>
             </div>

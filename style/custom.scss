@@ -71,8 +71,7 @@ div.select-dropdown.dropdown-trigger {
   height: 100%;
 }
 
-.input-field div.select-wrapper+label,
-.input-field div.thaw-input+label {
+.input-field div.select-wrapper+label {
   transform: scale(.75);
   top: 8px;
 }

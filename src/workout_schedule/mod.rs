@@ -18,7 +18,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::{postgres::*, *};
 use std::str::FromStr;
 use strum;
-use thaw::*;
 
 use crate::elements::select::Select;
 

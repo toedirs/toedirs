@@ -6,7 +6,7 @@ use std::{
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use chrono::{DateTime, Local, TimeZone, Weekday};
+use chrono::{DateTime, Local, NaiveDate, TimeZone, Weekday};
 use itertools::Itertools;
 use leptos::{ev::SubmitEvent, logging::log, *};
 use leptos_router::*;
@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::{postgres::*, *};
 use std::str::FromStr;
 use strum;
-use thaw::*;
 
 use crate::elements::select::Select;
 
@@ -162,8 +161,12 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     });
     let workout_type = create_rw_signal("0".to_string());
     let parameter_override = create_rw_signal(HashMap::<i64, i32>::new());
-    let start_date = create_rw_signal(Some(Local::now().date_naive()));
-    let end_date = create_rw_signal(Some(Local::now().date_naive()));
+    let start_date = create_rw_signal(Some(
+        Local::now().date_naive().format("%Y-%m-%d").to_string(),
+    ));
+    let end_date = create_rw_signal(Some(
+        Local::now().date_naive().format("%Y-%m-%d").to_string(),
+    ));
     let occurences = create_rw_signal(1);
     let end_type = create_rw_signal(EndType::Occurences);
     let repetition_type = create_rw_signal("weekly".to_string());
@@ -202,9 +205,16 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
             rrule = match end_type {
                 EndType::Occurences => rrule.count(occurences),
                 EndType::EndDate => rrule.until(
-                    Tz::LOCAL
-                        .from_local_datetime(&end.unwrap().and_hms_opt(0, 0, 0).unwrap())
-                        .unwrap(),
+                    end.and_then(|d| {
+                        NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
+                            .map(|d| {
+                                Tz::LOCAL
+                                    .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                                    .unwrap()
+                            })
+                            .ok()
+                    })
+                    .unwrap(),
                 ),
             };
             rrule = rrule.interval(repetition_freq);
@@ -222,8 +232,16 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
             };
             rrule
                 .validate(
-                    Tz::LOCAL
-                        .from_local_datetime(&start.unwrap().and_hms_opt(0, 0, 0).unwrap())
+                    start
+                        .and_then(|d| {
+                            NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
+                                .map(|d| {
+                                    Tz::LOCAL
+                                        .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                                        .unwrap()
+                                })
+                                .ok()
+                        })
                         .unwrap(),
                 )
                 .map(|r| r.to_string())
@@ -241,10 +259,14 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                         .dispatch(AddWorkout {
                             workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
                             start_date: start_date()
-                                .map(|d| {
-                                    Local
-                                        .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
-                                        .unwrap()
+                                .and_then(|d| {
+                                    NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
+                                        .map(|d| {
+                                            Local
+                                                .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                                                .unwrap()
+                                        })
+                                        .ok()
                                 })
                                 .unwrap(),
                             rrule: repetition_rule.get().unwrap(),
@@ -274,7 +296,6 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                             <div class="row">
                                 <Suspense fallback=move || view! { "loading..." }>
                                     <div class="col s6 input-field">
-                                        // <select name="workout_type" id="workout_type">
                                         {move || {
                                             workout_templates
                                                 .get()
@@ -374,7 +395,17 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                             </div>
                             <div class="row">
                                 <div class="col s6 input-field">
-                                    <DatePicker value=start_date attr:id="start_date"/>
+                                    <input
+                                        type="date"
+                                        value=start_date
+                                        on:change=move |ev| {
+                                            start_date
+                                                .update(|v| {
+                                                    *v = Some(event_target_value(&ev));
+                                                })
+                                        }
+                                    />
+
                                     <label for="start_date">Start Date</label>
                                 </div>
                             </div>
@@ -396,7 +427,18 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                 </div>
                                 <div class="col s2 input-field valign-wrapper">"every"</div>
                                 <div class="col s2 input-field">
-                                    <InputNumber value=repetition_frequency step=1/>
+                                    <input
+                                        type="number"
+                                        min=0
+                                        value=repetition_frequency
+                                        on:change=move |ev| {
+                                            repetition_frequency
+                                                .update(|v| {
+                                                    *v = event_target_value(&ev).parse().unwrap();
+                                                })
+                                        }
+                                    />
+
                                 </div>
                                 <div class="col s2 input-field valign-wrapper">
                                     {move || match repetition_type.get().as_str() {
@@ -411,15 +453,140 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                 <div class="row">
                                     <div class="col s1">"On"</div>
                                     <div class="col s11">
-                                        <CheckboxGroup value=repetition_on_day>
-                                            <CheckboxItem label="Monday" key="monday"/>
-                                            <CheckboxItem label="Tuesday" key="tuesday"/>
-                                            <CheckboxItem label="Wednesday" key="wednesday"/>
-                                            <CheckboxItem label="Thursday" key="thursday"/>
-                                            <CheckboxItem label="Friday" key="friday"/>
-                                            <CheckboxItem label="Saturday" key="saturday"/>
-                                            <CheckboxItem label="Sunday" key="sunday"/>
-                                        </CheckboxGroup>
+                                        <label style="margin-right:5px;">
+                                            <input
+                                                type="checkbox"
+                                                value="monday"
+                                                on:change=move |ev| {
+                                                    repetition_on_day
+                                                        .update(|r| {
+                                                            let val = event_target_value(&ev);
+                                                            if event_target_checked(&ev) {
+                                                                r.insert(val);
+                                                            } else {
+                                                                r.remove(&val);
+                                                            }
+                                                        })
+                                                }
+                                            />
+
+                                            <span>Monday</span>
+                                        </label>
+                                        <label style="margin-right:5px;">
+                                            <input
+                                                type="checkbox"
+                                                value="tuesday"
+                                                on:change=move |ev| {
+                                                    repetition_on_day
+                                                        .update(|r| {
+                                                            let val = event_target_value(&ev);
+                                                            if event_target_checked(&ev) {
+                                                                r.insert(val);
+                                                            } else {
+                                                                r.remove(&val);
+                                                            }
+                                                        })
+                                                }
+                                            />
+
+                                            <span>Tuesday</span>
+                                        </label>
+                                        <label style="margin-right:5px;">
+                                            <input
+                                                type="checkbox"
+                                                value="wednesday"
+                                                on:change=move |ev| {
+                                                    repetition_on_day
+                                                        .update(|r| {
+                                                            let val = event_target_value(&ev);
+                                                            if event_target_checked(&ev) {
+                                                                r.insert(val);
+                                                            } else {
+                                                                r.remove(&val);
+                                                            }
+                                                        })
+                                                }
+                                            />
+
+                                            <span>Wednesday</span>
+                                        </label>
+                                        <label style="margin-right:5px;">
+                                            <input
+                                                type="checkbox"
+                                                value="thursday"
+                                                on:change=move |ev| {
+                                                    repetition_on_day
+                                                        .update(|r| {
+                                                            let val = event_target_value(&ev);
+                                                            if event_target_checked(&ev) {
+                                                                r.insert(val);
+                                                            } else {
+                                                                r.remove(&val);
+                                                            }
+                                                        })
+                                                }
+                                            />
+
+                                            <span>Thursday</span>
+                                        </label>
+                                        <label style="margin-right:5px;">
+                                            <input
+                                                type="checkbox"
+                                                value="friday"
+                                                on:change=move |ev| {
+                                                    repetition_on_day
+                                                        .update(|r| {
+                                                            let val = event_target_value(&ev);
+                                                            if event_target_checked(&ev) {
+                                                                r.insert(val);
+                                                            } else {
+                                                                r.remove(&val);
+                                                            }
+                                                        })
+                                                }
+                                            />
+
+                                            <span>Friday</span>
+                                        </label>
+                                        <label style="margin-right:5px;">
+                                            <input
+                                                type="checkbox"
+                                                value="saturday"
+                                                on:change=move |ev| {
+                                                    repetition_on_day
+                                                        .update(|r| {
+                                                            let val = event_target_value(&ev);
+                                                            if event_target_checked(&ev) {
+                                                                r.insert(val);
+                                                            } else {
+                                                                r.remove(&val);
+                                                            }
+                                                        })
+                                                }
+                                            />
+
+                                            <span>Saturday</span>
+                                        </label>
+                                        <label style="margin-right:5px;">
+                                            <input
+                                                type="checkbox"
+                                                value="sunday"
+                                                on:change=move |ev| {
+                                                    log!("{}", event_target_checked(& ev));
+                                                    repetition_on_day
+                                                        .update(|r| {
+                                                            let val = event_target_value(&ev);
+                                                            if event_target_checked(&ev) {
+                                                                r.insert(val);
+                                                            } else {
+                                                                r.remove(&val);
+                                                            }
+                                                        })
+                                                }
+                                            />
+
+                                            <span>Sunday</span>
+                                        </label>
                                     </div>
                                 </div>
                             </Show>
@@ -430,7 +597,19 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                 <div class="row">
                                     <div class="col s1">On day</div>
                                     <div class="col s3 input-field">
-                                        <InputNumber value=month_day step=1/>
+                                        <input
+                                            type="number"
+                                            value=month_day
+                                            min=1
+                                            max=31
+                                            on:change=move |ev| {
+                                                month_day
+                                                    .update(|v| {
+                                                        *v = event_target_value(&ev).parse().unwrap();
+                                                    })
+                                            }
+                                        />
+
                                     </div>
                                 </div>
                             </Show>
@@ -445,7 +624,20 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 checked
                                             />
                                             <span>
-                                                "After" <InputNumber value=occurences step=1/> "occurences"
+                                                "After"
+                                                <input
+                                                    type="number"
+                                                    value=occurences
+                                                    min=1
+                                                    max=31
+                                                    on:change=move |ev| {
+                                                        occurences
+                                                            .update(|v| {
+                                                                *v = event_target_value(&ev).parse().unwrap();
+                                                            })
+                                                    }
+                                                />
+                                                "occurences"
                                             </span>
                                         </label>
                                     </p> <p>
@@ -456,7 +648,18 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 on:click=move |_| end_type.set(EndType::EndDate)
                                             />
                                             <span>
-                                                "On date" <DatePicker value=end_date attr:id="end_date"/>
+                                                "On date"
+                                                <input
+                                                    type="date"
+                                                    value=end_date
+                                                    on:change=move |ev| {
+                                                        end_date
+                                                            .update(|v| {
+                                                                *v = Some(event_target_value(&ev));
+                                                            })
+                                                    }
+                                                />
+
                                             </span>
                                         </label>
                                     </p>
