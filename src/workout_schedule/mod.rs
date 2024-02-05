@@ -94,8 +94,31 @@ pub struct ScalingEntry {
     pub factor: i32,
 }
 
+#[server]
+pub async fn delete_workout_instance(instance_id: i64) -> Result<(), ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+    sqlx::query!(
+        r#"
+        DELETE FROM workout_instances
+        WHERE user_id=$1 and id=$2
+        "#,
+        user.id as _,
+        instance_id
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Couldn't load weekly scaling: {}", e)))?;
+
+    Ok(())
+}
+
 #[component]
 pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> impl IntoView {
+    let delete_instance = create_server_action::<DeleteWorkoutInstance>();
     view! {
         <div class="col s1 center-align">
             <div class="row" style="margin-bottom:0px;">
@@ -142,6 +165,18 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                                                         on:mouseout=move |_| show_info.set(false)
                                                     >
                                                         info
+                                                    </i>
+                                                    <i
+                                                        class="material-symbols-rounded"
+                                                        on:click=move |_| {
+                                                            delete_instance
+                                                                .dispatch(DeleteWorkoutInstance {
+                                                                    instance_id: e.id,
+                                                                });
+                                                        }
+                                                    >
+
+                                                        close
                                                     </i> <Show when=move || { show_info() } fallback=|| {}>
                                                         <div style="position:fixed;top:5%;background:white;width:500px;">
 
@@ -425,6 +460,7 @@ pub struct WorkoutStep {
 }
 #[derive(Debug, Clone)]
 pub struct Workout {
+    id: i64,
     name: String,
     steps: Vec<WorkoutStep>,
 }
@@ -507,6 +543,7 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
                 })
                 .collect();
             let workout = Workout {
+                id: instance.id,
                 name: instance.template.template_name.clone(),
                 steps,
             };
