@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT \n            activities.id, \n            activities.start_time, \n            activities.duration  \n        FROM activities \n        WHERE activities.user_id = $1::bigint",
+  "query": "\n        SELECT \n            activities.id, \n            activities.start_time, \n            activities.duration  \n        FROM activities \n        WHERE activities.user_id = $1::bigint\n        ORDER BY activities.start_time DESC",
   "describe": {
     "columns": [
       {
@@ -30,5 +30,5 @@
       false
     ]
   },
-  "hash": "f17d0081ce63cd30982953688252c10a444f5418c4a18c3b8597348e192698e7"
+  "hash": "94f2764fec96ddd7a34d4449efc8609933948bc0b269e86f9e1e55426b33c725"
 }

@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": " \n    WITH weeks as (\n        SELECT generate_series(\n            date_trunc('week', $2::timestamptz),\n            date_trunc('week', $3::timestamptz),\n            '1 week'\n        ) as start\n    )\n    SELECT\n        weeks.start as \"date!\",\n        COALESCE(SUM(activities.load), 0)::int8 as \"load!\"\n    FROM weeks\n    LEFT JOIN (\n        SELECT \n            COALESCE(ROUND((AVG(record.heartrate)-125)/8 * EXTRACT(EPOCH FROM (activities.end_time - activities.start_time))/60),0)::int8 as load,\n            date_trunc('week', activities.start_time ) as date\n        FROM activities as activities\n        LEFT JOIN records as record ON record.activity_id = activities.id\n        WHERE activities.user_id = $1::bigint \n            AND record.heartrate IS NOT NULL AND record.heartrate >= 126\n        GROUP BY activities.id\n    ) activities ON activities.date = weeks.start\n    GROUP BY weeks.start\n    ORDER BY weeks.start\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "load!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "905ead24b20a2717fa210b8f76933422dd54f257db4c8cd1e2a9f151c1a1a585"
+}

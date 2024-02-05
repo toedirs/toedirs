@@ -31,7 +31,8 @@ pub async fn get_activity_list() -> Result<Vec<ActivityListEntry>, ServerFnError
             activities.start_time, 
             activities.duration  
         FROM activities 
-        WHERE activities.user_id = $1::bigint"#,
+        WHERE activities.user_id = $1::bigint
+        ORDER BY activities.start_time DESC"#,
         user.id
     )
     .fetch_all(&pool)

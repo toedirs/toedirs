@@ -20,16 +20,30 @@ pub async fn training_load(
     executor: sqlx::PgPool,
 ) -> Result<Vec<TrainingLoad>, sqlx::Error> {
     //todo: calculate actual trimp
-    let result:Vec<TrainingLoad> = sqlx::query_as!(TrainingLoad, r#" SELECT 
-        COALESCE(ROUND((AVG(record.heartrate)-125)/8 * EXTRACT(EPOCH FROM (activities.end_time - activities.start_time))/60),0)::int8 as "load!",
-        activities.start_time as date
-    FROM activities as activities
-    LEFT JOIN records as record ON record.activity_id = activities.id
-    WHERE activities.user_id = $1::bigint 
-        AND activities.start_time >= $2::timestamptz AND activities.end_time <= $3::timestamptz
-        AND record.heartrate IS NOT NULL AND record.heartrate >= 126
-    GROUP BY activities.id
-    ORDER BY activities.start_time
+    let result:Vec<TrainingLoad> = sqlx::query_as!(TrainingLoad, r#" 
+    WITH weeks as (
+        SELECT generate_series(
+            date_trunc('week', $2::timestamptz),
+            date_trunc('week', $3::timestamptz),
+            '1 week'
+        ) as start
+    )
+    SELECT
+        weeks.start as "date!",
+        COALESCE(SUM(activities.load), 0)::int8 as "load!"
+    FROM weeks
+    LEFT JOIN (
+        SELECT 
+            COALESCE(ROUND((AVG(record.heartrate)-125)/8 * EXTRACT(EPOCH FROM (activities.end_time - activities.start_time))/60),0)::int8 as load,
+            date_trunc('week', activities.start_time ) as date
+        FROM activities as activities
+        LEFT JOIN records as record ON record.activity_id = activities.id
+        WHERE activities.user_id = $1::bigint 
+            AND record.heartrate IS NOT NULL AND record.heartrate >= 126
+        GROUP BY activities.id
+    ) activities ON activities.date = weeks.start
+    GROUP BY weeks.start
+    ORDER BY weeks.start
 "#, &user_id, &from,&to).fetch_all(&executor).await?;
     Ok(result)
 }
