@@ -8,7 +8,7 @@ use crate::{
     workout_schedule::WorkoutCalendar,
 };
 use chrono::{Duration, Local, NaiveDate, NaiveDateTime, TimeZone};
-use leptos::*;
+use leptos::{html::Label, *};
 use leptos_meta::*;
 use leptos_router::*;
 
@@ -253,6 +253,8 @@ fn Overview() -> impl IntoView {
 
 #[component]
 fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
+    let name_ref = create_node_ref::<Label>();
+    let passwd_ref = create_node_ref::<Label>();
     view! {
         <ActionForm action=action>
             <div class="row">
@@ -268,14 +270,42 @@ fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
                         maxlength="32"
                         name="username"
                         id="username"
+                        on:focusin=move |_| {
+                            name_ref.get_untracked().unwrap().classes("active");
+                        }
+
+                        on:focusout=move |ev| {
+                            if event_target_value(&ev).len() == 0 {
+                                name_ref.get_untracked().unwrap().class_list().remove_1("active");
+                            }
+                        }
                     />
-                    <label for="username">"User ID:"</label>
+
+                    <label ref=name_ref for="username">
+                        "User ID:"
+                    </label>
                 </div>
             </div>
             <div class="row">
                 <div class="input-field col s12">
-                    <input type="password" placeholder="Password" name="password"/>
-                    <label for="password">"Password:"</label>
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        on:focusin=move |_| {
+                            passwd_ref.get_untracked().unwrap().classes("active");
+                        }
+
+                        on:focusout=move |ev| {
+                            if event_target_value(&ev).len() == 0 {
+                                passwd_ref.get_untracked().unwrap().class_list().remove_1("active");
+                            }
+                        }
+                    />
+
+                    <label ref=passwd_ref for="password">
+                        "Password:"
+                    </label>
                 </div>
             </div>
             <div class="row">
@@ -302,6 +332,9 @@ fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
 
 #[component]
 fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
+    let name_ref = create_node_ref::<Label>();
+    let passwd_ref = create_node_ref::<Label>();
+    let passwd2_ref = create_node_ref::<Label>();
     view! {
         <ActionForm action=action>
             <div class="row">
@@ -317,14 +350,51 @@ fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
                         maxlength="32"
                         name="username"
                         id="username"
+                        on:focusin=move |_| {
+                            let _ = name_ref.get_untracked().unwrap().classes("active");
+                        }
+
+                        on:focusout=move |ev| {
+                            if event_target_value(&ev).len() == 0 {
+                                let _ = name_ref
+                                    .get_untracked()
+                                    .unwrap()
+                                    .class_list()
+                                    .remove_1("active");
+                            }
+                        }
                     />
-                    <label for="username">"User ID:"</label>
+
+                    <label ref=name_ref for="username">
+                        "User ID:"
+                    </label>
                 </div>
             </div>
             <div class="row">
                 <div class="input-field col s12">
-                    <input type="password" placeholder="Password" name="password" id="password"/>
-                    <label for="password">"Password:"</label>
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        id="password"
+                        on:focusin=move |_| {
+                            let _ = passwd_ref.get_untracked().unwrap().classes("active");
+                        }
+
+                        on:focusout=move |ev| {
+                            if event_target_value(&ev).len() == 0 {
+                                let _ = passwd_ref
+                                    .get_untracked()
+                                    .unwrap()
+                                    .class_list()
+                                    .remove_1("active");
+                            }
+                        }
+                    />
+
+                    <label ref=passwd_ref for="password">
+                        "Password:"
+                    </label>
                 </div>
             </div>
             <div class="row">
@@ -334,8 +404,24 @@ fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
                         placeholder="Password again"
                         name="password_confirmation"
                         id="password_confirmation"
+                        on:focusin=move |_| {
+                            let _ = passwd2_ref.get_untracked().unwrap().classes("active");
+                        }
+
+                        on:focusout=move |ev| {
+                            if event_target_value(&ev).len() == 0 {
+                                let _ = passwd2_ref
+                                    .get_untracked()
+                                    .unwrap()
+                                    .class_list()
+                                    .remove_1("active");
+                            }
+                        }
                     />
-                    <label for="password_confirmation">"Confirm Password:"</label>
+
+                    <label ref=passwd2_ref for="password_confirmation">
+                        "Confirm Password:"
+                    </label>
                 </div>
             </div>
             <div class="row">

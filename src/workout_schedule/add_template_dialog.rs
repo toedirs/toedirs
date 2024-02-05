@@ -178,7 +178,7 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         show.set(false);
     };
     let owner = Owner::current().unwrap();
-    watch(
+    let _ = watch(
         move || show.get(),
         move |cur, prev, _| {
             if *cur && !*prev.unwrap_or(&false) {
@@ -188,7 +188,7 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         },
         false,
     );
-    watch(
+    let _ = watch(
         move || workout_parameter_index.get(),
         move |num, _, _| {
             workout_parameters.update(|v| {
@@ -221,12 +221,12 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                         name="name"
                                         type="text"
                                         on:focusin=move |_| {
-                                            name_ref.get_untracked().unwrap().classes("active");
+                                            let _ = name_ref.get_untracked().unwrap().classes("active");
                                         }
 
                                         on:focusout=move |ev| {
                                             if event_target_value(&ev).len() == 0 {
-                                                name_ref
+                                                let _ = name_ref
                                                     .get_untracked()
                                                     .unwrap()
                                                     .class_list()
