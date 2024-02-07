@@ -9,6 +9,7 @@ use crate::workout_schedule::{
     add_template_dialog::CreateWorkoutDialog, add_workout_dialog::AddWorkoutDialog,
 };
 use chrono::{DateTime, Datelike, Days, Duration, IsoWeek, Local, NaiveDate, TimeZone, Weekday};
+use humantime::format_duration;
 use leptos::{html::Div, logging::log, *};
 use leptos_router::*;
 use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
@@ -188,7 +189,18 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                                                                         view! {
                                                                             <div class="row">
                                                                                 <div class="col s3">{s.name.clone()}</div>
-                                                                                <div class="col s3">{s.value.clone()}</div>
+                                                                                <div class="col s3">
+                                                                                    {match s.param_type.as_str() {
+                                                                                        "time_s" => {
+                                                                                            format_duration(
+                                                                                                    std::time::Duration::new(s.value.clone() as _, 0),
+                                                                                                )
+                                                                                                .to_string()
+                                                                                        }
+                                                                                        _ => s.value.clone().to_string(),
+                                                                                    }}
+
+                                                                                </div>
                                                                                 <div class="col s3">{s.param_type.clone()}</div>
                                                                             </div>
                                                                         }
