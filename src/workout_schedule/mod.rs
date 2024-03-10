@@ -120,15 +120,15 @@ pub async fn delete_workout_instance(instance_id: i64) -> Result<(), ServerFnErr
 pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> impl IntoView {
     let delete_instance = create_server_action::<DeleteWorkoutInstance>();
     view! {
-        <div class="col s1 center-align">
-            <div class="row" style="margin-bottom:0px;">
+        <div class="column">
+            <div class="columns" style="margin-bottom:0px;">
                 <div class=move || {
                     format!(
-                        "col s12 white-text {}",
+                        "column has-text-white {}",
                         if week.week == today.iso_week() && today.weekday() == day {
-                            "blue darken-2"
+                            "has-background-primary"
                         } else {
-                            "indigo darken-1"
+                            "has-background-link"
                         },
                     )
                 }>
@@ -143,74 +143,76 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
 
                 </div>
             </div>
-            <div class="row">
-                <div class="col s12">
+            <div class="columns">
+                <div class="column is-full">
                     {week
                         .workouts
                         .get(&day)
                         .map(|w| {
                             let w = w.clone();
                             view! {
-                                <div class="collection">
+                                <div class="columns is-multiline center-align">
                                     {w
                                         .into_iter()
                                         .map(|e| {
                                             let show_info = create_rw_signal(false);
                                             view! {
-                                                <li class="collection-item center-align valign-wrapper">
-                                                    {e.name.clone()}
-                                                    <i
-                                                        class="material-symbols-rounded"
-                                                        on:mouseover=move |_| show_info.set(true)
-                                                        on:mouseout=move |_| show_info.set(false)
-                                                    >
-                                                        info
-                                                    </i>
-                                                    <i
-                                                        class="material-symbols-rounded"
-                                                        on:click=move |_| {
-                                                            delete_instance
-                                                                .dispatch(DeleteWorkoutInstance {
-                                                                    instance_id: e.id,
-                                                                });
-                                                        }
-                                                    >
-
-                                                        close
-                                                    </i> <Show when=move || { show_info() } fallback=|| {}>
-                                                        <div style="position:fixed;top:5%;background:white;width:500px;">
-
-                                                            {
-                                                                let mut steps = e.steps.clone();
-                                                                steps.sort_by(|a, b| a.position.cmp(&b.position));
-                                                                steps
-                                                                    .iter()
-                                                                    .map(|s| {
-                                                                        view! {
-                                                                            <div class="row">
-                                                                                <div class="col s3">{s.name.clone()}</div>
-                                                                                <div class="col s3">
-                                                                                    {match s.param_type.as_str() {
-                                                                                        "time_s" => {
-                                                                                            format_duration(
-                                                                                                    std::time::Duration::new(s.value.clone() as _, 0),
-                                                                                                )
-                                                                                                .to_string()
-                                                                                        }
-                                                                                        _ => s.value.clone().to_string(),
-                                                                                    }}
-
-                                                                                </div>
-                                                                                <div class="col s3">{s.param_type.clone()}</div>
-                                                                            </div>
-                                                                        }
-                                                                    })
-                                                                    .collect::<Vec<_>>()
+                                                <div class="column is-fullwidth center-align valign-wrapper">
+                                                    <div class="box center-align valign-wrapper">
+                                                        {e.name.clone()}
+                                                        <i
+                                                            class="material-symbols-rounded"
+                                                            on:mouseover=move |_| show_info.set(true)
+                                                            on:mouseout=move |_| show_info.set(false)
+                                                        >
+                                                            info
+                                                        </i>
+                                                        <i
+                                                            class="material-symbols-rounded"
+                                                            on:click=move |_| {
+                                                                delete_instance
+                                                                    .dispatch(DeleteWorkoutInstance {
+                                                                        instance_id: e.id,
+                                                                    });
                                                             }
+                                                        >
 
-                                                        </div>
-                                                    </Show>
-                                                </li>
+                                                            close
+                                                        </i> <Show when=move || { show_info() } fallback=|| {}>
+                                                            <div style="position:fixed;top:5%;background:white;width:500px;">
+
+                                                                {
+                                                                    let mut steps = e.steps.clone();
+                                                                    steps.sort_by(|a, b| a.position.cmp(&b.position));
+                                                                    steps
+                                                                        .iter()
+                                                                        .map(|s| {
+                                                                            view! {
+                                                                                <div class="row">
+                                                                                    <div class="col s3">{s.name.clone()}</div>
+                                                                                    <div class="col s3">
+                                                                                        {match s.param_type.as_str() {
+                                                                                            "time_s" => {
+                                                                                                format_duration(
+                                                                                                        std::time::Duration::new(s.value.clone() as _, 0),
+                                                                                                    )
+                                                                                                    .to_string()
+                                                                                            }
+                                                                                            _ => s.value.clone().to_string(),
+                                                                                        }}
+
+                                                                                    </div>
+                                                                                    <div class="col s3">{s.param_type.clone()}</div>
+                                                                                </div>
+                                                                            }
+                                                                        })
+                                                                        .collect::<Vec<_>>()
+                                                                }
+
+                                                            </div>
+                                                        </Show>
+                                                    </div>
+                                                </div>
                                             }
                                         })
                                         .collect::<Vec<_>>()}
@@ -621,38 +623,36 @@ pub fn WorkoutCalendar() -> impl IntoView {
         }
     });
     let set_scaling = create_server_action::<SetWeekScaling>();
-    let action_button = create_node_ref::<Div>();
-    let action_is_hovered = use_element_hover(action_button);
     let show_add_workout = create_rw_signal(false);
     let show_create_workout = create_rw_signal(false);
     view! {
         <div class="workout-calendar">
             <div class="calendar-row calendar-header white-text blue darken-1">
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Week</h5>
                 </div>
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Mon</h5>
                 </div>
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Tue</h5>
                 </div>
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Wed</h5>
                 </div>
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Thu</h5>
                 </div>
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Fri</h5>
                 </div>
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Sat</h5>
                 </div>
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Sun</h5>
                 </div>
-                <div class="col s1 center-align">
+                <div class="col center-align">
                     <h5>Load</h5>
                 </div>
             </div>
@@ -661,7 +661,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
                 <div class="calendar-body">
                     <For each=move || weeks.get() key=|i| format!("{:?}", i.week) let:item>
                         <div class="calendar-row cal-content">
-                            <div class="col s1 center-align valign-wrapper p-6">
+                            <div class="column center-align valign-wrapper">
                                 {item.week.year()} - {item.week.week()}
                             </div>
                             <WorkoutDay week=item.clone() today=today day=Weekday::Mon/>
@@ -671,129 +671,134 @@ pub fn WorkoutCalendar() -> impl IntoView {
                             <WorkoutDay week=item.clone() today=today day=Weekday::Fri/>
                             <WorkoutDay week=item.clone() today=today day=Weekday::Sat/>
                             <WorkoutDay week=item.clone() today=today day=Weekday::Sun/>
-                            <div class="col s1 center-align">
-                                <select
-                                    name=format!("load-{}-{}", item.week.year(), item.week.week())
-                                    id=format!("load-{}-{}", item.week.year(), item.week.week())
-                                    style="display:block;"
-                                    on:input=move |ev| {
-                                        let val = event_target_value(&ev).parse::<i32>();
-                                        if let Ok(val) = val {
-                                            set_scaling
-                                                .dispatch(SetWeekScaling {
-                                                    year: item.week.year(),
-                                                    week: item.week.week().try_into().unwrap(),
-                                                    scaling: val,
-                                                });
-                                        }
-                                    }
-                                >
+                            <div class="column field">
+                                <div class="control select">
+                                    <select
+                                        name=format!(
+                                            "load-{}-{}",
+                                            item.week.year(),
+                                            item.week.week(),
+                                        )
 
-                                    <option value="-50" selected=item.scaling == -50>
-                                        -50%
-                                    </option>
-                                    <option value="-45" selected=item.scaling == -45>
-                                        -45%
-                                    </option>
-                                    <option value="-40" selected=item.scaling == -40>
-                                        -40%
-                                    </option>
-                                    <option value="-35" selected=item.scaling == -35>
-                                        -35%
-                                    </option>
-                                    <option value="-30" selected=item.scaling == -30>
-                                        -30%
-                                    </option>
-                                    <option value="-25" selected=item.scaling == -25>
-                                        -25%
-                                    </option>
-                                    <option value="-20" selected=item.scaling == -20>
-                                        -20%
-                                    </option>
-                                    <option value="-15" selected=item.scaling == -15>
-                                        -15%
-                                    </option>
-                                    <option value="-10" selected=item.scaling == -10>
-                                        -10%
-                                    </option>
-                                    <option value="-5" selected=item.scaling == -5>
-                                        -5%
-                                    </option>
-                                    <option value="0" selected=item.scaling == -0>
-                                        0%
-                                    </option>
-                                    <option value="5" selected=item.scaling == 5>
-                                        5%
-                                    </option>
-                                    <option value="10" selected=item.scaling == 10>
-                                        10%
-                                    </option>
-                                    <option value="15" selected=item.scaling == 15>
-                                        15%
-                                    </option>
-                                    <option value="20" selected=item.scaling == 20>
-                                        20%
-                                    </option>
-                                    <option value="25" selected=item.scaling == 25>
-                                        25%
-                                    </option>
-                                    <option value="30" selected=item.scaling == 30>
-                                        30%
-                                    </option>
-                                    <option value="35" selected=item.scaling == 35>
-                                        35%
-                                    </option>
-                                    <option value="40" selected=item.scaling == 40>
-                                        40%
-                                    </option>
-                                    <option value="45" selected=item.scaling == 45>
-                                        45%
-                                    </option>
-                                    <option value="50" selected=item.scaling == 50>
-                                        50%
-                                    </option>
-                                </select>
+                                        id=format!("load-{}-{}", item.week.year(), item.week.week())
+                                        style="display:block;"
+                                        on:input=move |ev| {
+                                            let val = event_target_value(&ev).parse::<i32>();
+                                            if let Ok(val) = val {
+                                                set_scaling
+                                                    .dispatch(SetWeekScaling {
+                                                        year: item.week.year(),
+                                                        week: item.week.week().try_into().unwrap(),
+                                                        scaling: val,
+                                                    });
+                                            }
+                                        }
+                                    >
+
+                                        <option value="-50" selected=item.scaling == -50>
+                                            -50%
+                                        </option>
+                                        <option value="-45" selected=item.scaling == -45>
+                                            -45%
+                                        </option>
+                                        <option value="-40" selected=item.scaling == -40>
+                                            -40%
+                                        </option>
+                                        <option value="-35" selected=item.scaling == -35>
+                                            -35%
+                                        </option>
+                                        <option value="-30" selected=item.scaling == -30>
+                                            -30%
+                                        </option>
+                                        <option value="-25" selected=item.scaling == -25>
+                                            -25%
+                                        </option>
+                                        <option value="-20" selected=item.scaling == -20>
+                                            -20%
+                                        </option>
+                                        <option value="-15" selected=item.scaling == -15>
+                                            -15%
+                                        </option>
+                                        <option value="-10" selected=item.scaling == -10>
+                                            -10%
+                                        </option>
+                                        <option value="-5" selected=item.scaling == -5>
+                                            -5%
+                                        </option>
+                                        <option value="0" selected=item.scaling == -0>
+                                            0%
+                                        </option>
+                                        <option value="5" selected=item.scaling == 5>
+                                            5%
+                                        </option>
+                                        <option value="10" selected=item.scaling == 10>
+                                            10%
+                                        </option>
+                                        <option value="15" selected=item.scaling == 15>
+                                            15%
+                                        </option>
+                                        <option value="20" selected=item.scaling == 20>
+                                            20%
+                                        </option>
+                                        <option value="25" selected=item.scaling == 25>
+                                            25%
+                                        </option>
+                                        <option value="30" selected=item.scaling == 30>
+                                            30%
+                                        </option>
+                                        <option value="35" selected=item.scaling == 35>
+                                            35%
+                                        </option>
+                                        <option value="40" selected=item.scaling == 40>
+                                            40%
+                                        </option>
+                                        <option value="45" selected=item.scaling == 45>
+                                            45%
+                                        </option>
+                                        <option value="50" selected=item.scaling == 50>
+                                            50%
+                                        </option>
+                                    </select>
+                                </div>
                             </div>
 
                         </div>
                     </For>
                 </div>
             </div>
-            <div
-                node_ref=action_button
-                class=move || {
-                    format!(
-                        "fixed-action-btn direction-top {}",
-                        if action_is_hovered.get() { "active" } else { "" },
-                    )
-                }
-            >
+            <div class="is-fab dropdown is-hoverable is-up">
+                <span
+                    class="icon is-large has-text-primary dropdown-trigger"
+                    aria-haspopup="true"
+                    aria-controls="calendar-action-menu"
+                >
+                    <i class="fas fa-plus-circle fa-3x"></i>
+                </span>
 
-                <a class="btn-floating btn-large teal">
-                    <i class="large material-symbols-rounded">add</i>
-                </a>
-                <ul>
-                    <li>
+                <div class="dropdown-menu" id="calendar-action-menu" role="menu">
+                    <div class="dropdown-content">
                         <a
-                            class="btn-floating teal"
-                            style="opacity:1;"
+                            class="button dropdown-item"
                             alt="Add workout template"
                             on:click=move |_| { show_create_workout.set(true) }
                         >
-                            <i class="material-symbols-rounded">fitness_center</i>
+                            <span class="icon is-small">
+                                <i class="fas fa-dumbbell"></i>
+                            </span>
+                            <span>Add Template</span>
                         </a>
-                    </li>
-                    <li>
                         <a
-                            class="btn-floating teal"
-                            style="opacity:1;"
+                            class="button dropdown-item"
                             alt="Add workout entry"
                             on:click=move |_| { show_add_workout.set(true) }
                         >
-                            <i class="material-symbols-rounded">event</i>
+                            <span class="icon is-small">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <span>Add Workout Entry</span>
                         </a>
-                    </li>
-                </ul>
+                    </div>
+                </div>
             </div>
             <CreateWorkoutDialog show=show_create_workout/>
             <AddWorkoutDialog show=show_add_workout/>

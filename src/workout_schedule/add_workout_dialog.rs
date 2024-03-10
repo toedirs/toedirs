@@ -17,8 +17,6 @@ use sqlx::{postgres::*, *};
 use std::str::FromStr;
 use strum;
 
-use crate::elements::select::Select;
-
 use super::WorkoutType;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -249,6 +247,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         },
     );
     let add_workout_action = create_server_action::<AddWorkout>();
+    let close = move |_| show.set(false);
 
     view! {
         <Show when=move || { show() } fallback=|| {}>
@@ -286,53 +285,69 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                 }
             >
 
-                <div class="modal" style="z-index: 1003;">
-                    <div class="modal-header">
-                        <h4 class="black-text">"Add workout to calendar"</h4>
-                    </div>
-                    <div class="modal-body">
-                        <div class="modal-content" style="overflow:scroll;">
-                            <div class="row"></div>
-                            <div class="row">
+                <div class="modal is-active">
+                    <div class="modal-background" on:click=close></div>
+                    <div class="modal-card">
+                        <div class="modal-card-head">
+                            <p class="modal-card-title">"Add workout to calendar"</p>
+                            <button class="delete" aria-label="close" on:click=close></button>
+                        </div>
+                        <div class="modal-card-body">
+                            <div class="field">
+                                <label class="label" for="workout_templ">
+                                    Workout Template
+                                </label>
                                 <Suspense fallback=move || view! { "loading..." }>
-                                    <div class="col s6 input-field">
-                                        {move || {
-                                            workout_templates
-                                                .get()
-                                                .map(|templates| {
-                                                    let options = iter::once((
-                                                            "0".to_string(),
-                                                            "Choose workout template".to_string(),
-                                                            true,
-                                                        ))
-                                                        .chain(
-                                                            templates
-                                                                .iter()
-                                                                .map(|t| {
-                                                                    (format!("{}", t.id), t.template_name.clone(), false)
-                                                                }),
-                                                        )
-                                                        .collect::<Vec<_>>();
-                                                    view! {
-                                                        <Select
-                                                            value=workout_type
-                                                            name="workout_type".to_string()
-                                                            options=Some(options)
-                                                            attr:id="workout_templ"
-                                                        >
+                                    <div class="control">
+                                        <div class="select">
+                                            <select
+                                                name="workout_templ"
+                                                value=workout_type
+                                                on:input=move |ev| workout_type.set(event_target_value(&ev))
+                                            >
+                                                {move || {
+                                                    workout_templates
+                                                        .get()
+                                                        .map(|templates| {
+                                                            let options = iter::once((
+                                                                    "0".to_string(),
+                                                                    "Choose workout template".to_string(),
+                                                                    true,
+                                                                ))
+                                                                .chain(
+                                                                    templates
+                                                                        .iter()
+                                                                        .map(|t| {
+                                                                            (format!("{}", t.id), t.template_name.clone(), false)
+                                                                        }),
+                                                                )
+                                                                .collect::<Vec<_>>();
+                                                            view! {
+                                                                <For
+                                                                    each=move || options.clone()
+                                                                    key=move |i| i.0.clone()
+                                                                    let:item
+                                                                >
+                                                                    <option
+                                                                        value=item.0.clone()
+                                                                        disabled=item.2
+                                                                        selected=item.0 == workout_type()
+                                                                    >
+                                                                        {item.1}
+                                                                    </option>
+                                                                </For>
+                                                            }
+                                                        })
+                                                }}
 
-                                                            {}
-                                                        </Select>
-                                                        <label for="workout_templ">Workout Template</label>
-                                                    }
-                                                })
-                                        }}
+                                            </select>
 
+                                        </div>
                                     </div>
                                 </Suspense>
                             </div>
-                            <div class="row">
-                                <div class="col s12">
+                            <div class="columns">
+                                <div class="column is-fullwidth">
                                     <Show
                                         when=move || { workout_type.get() != "0" }
                                         fallback=|| view! {}
@@ -358,10 +373,11 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                             view! {}.into_view()
                                                         }}
 
-                                                        <div class="row">
-                                                            <div class="col s2">{p.name.clone()}</div>
-                                                            <div class="col s2">
+                                                        <div class="field is-grouped">
+                                                            <p class="control is-vcentered">{p.name.clone()}</p>
+                                                            <p class="control is-vcentered">
                                                                 <input
+                                                                    class="input"
                                                                     type="number"
                                                                     name=format!("param[{}][value]", i)
                                                                     value=p.value
@@ -376,11 +392,13 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                                     }
                                                                 />
 
-                                                            </div>
-                                                            <div class="col s2">{p.parameter_type.clone()}</div>
-                                                            <div class="col s2">
+                                                            </p>
+                                                            <p class="control is-vcentered">
+                                                                {p.parameter_type.clone()}
+                                                            </p>
+                                                            <p class="control is-vcentered">
                                                                 {if p.scaling { "scaling" } else { "" }}
-                                                            </div>
+                                                            </p>
                                                         </div>
                                                     }
                                                 })
@@ -390,12 +408,21 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                     </Show>
                                 </div>
                             </div>
-                            <div class="row">
-                                <input value=repetition_rule/>
+                            <div class="field">
+                                <label class="label" for="rep_rule">
+                                    Repetition Rule
+                                </label>
+                                <div class="control">
+                                    <input class="input" value=repetition_rule/>
+                                </div>
                             </div>
-                            <div class="row">
-                                <div class="col s6 input-field">
+                            <div class="field">
+                                <label class="label" for="start_date">
+                                    Start Date
+                                </label>
+                                <div class="control">
                                     <input
+                                        class="input"
                                         type="date"
                                         value=start_date
                                         on:change=move |ev| {
@@ -406,28 +433,45 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                         }
                                     />
 
-                                    <label for="start_date">Start Date</label>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col s2 input-field valign-wrapper">
+                            <div class="field is-grouped">
+                                <p class="control">
                                     <span>"Repeat"</span>
-                                </div>
-                                <div class="col s2 input-field">
-                                    <Select
-                                        value=repetition_type
-                                        name="repetition_type".to_string()
-                                        options=None
-                                        attr:id="repetition_type"
-                                    >
-                                        <option value="daily">Daily</option>
-                                        <option value="weekly">Weekly</option>
-                                        <option value="monthly">Monthly</option>
-                                    </Select>
-                                </div>
-                                <div class="col s2 input-field valign-wrapper">"every"</div>
-                                <div class="col s2 input-field">
+                                </p>
+                                <p class="control">
+                                    <div class="select">
+                                        <select
+                                            value=repetition_type
+                                            name="repetition_type"
+                                            id="repetition_type"
+                                            on:input=move |ev| {
+                                                repetition_type.set(event_target_value(&ev))
+                                            }
+                                        >
+
+                                            <option value="daily" selected=repetition_type() == "daily">
+                                                Daily
+                                            </option>
+                                            <option
+                                                value="weekly"
+                                                selected=repetition_type() == "weekly"
+                                            >
+                                                Weekly
+                                            </option>
+                                            <option
+                                                value="monthly"
+                                                selected=repetition_type() == "monthly"
+                                            >
+                                                Monthly
+                                            </option>
+                                        </select>
+                                    </div>
+                                </p>
+                                <p class="control">"every"</p>
+                                <p class="control">
                                     <input
+                                        class="input"
                                         type="number"
                                         min=0
                                         value=repetition_frequency
@@ -439,21 +483,21 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                         }
                                     />
 
-                                </div>
-                                <div class="col s2 input-field valign-wrapper">
+                                </p>
+                                <p class="control">
                                     {move || match repetition_type.get().as_str() {
                                         "weekly" => "weeks",
                                         "daily" => "days",
                                         _ => "months",
                                     }}
 
-                                </div>
+                                </p>
                             </div>
                             <Show when=move || { repetition_type.get() == "weekly" } fallback=|| {}>
-                                <div class="row">
-                                    <div class="col s1">"On"</div>
-                                    <div class="col s11">
-                                        <label style="margin-right:5px;">
+                                <div class="field is-grouped">
+                                    <p class="control">"On"</p>
+                                    <p class="control">
+                                        <label class="checkbox">
                                             <input
                                                 type="checkbox"
                                                 value="monday"
@@ -470,9 +514,11 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 }
                                             />
 
-                                            <span>Monday</span>
+                                            Mon
                                         </label>
-                                        <label style="margin-right:5px;">
+                                    </p>
+                                    <p class="control">
+                                        <label class="checkbox">
                                             <input
                                                 type="checkbox"
                                                 value="tuesday"
@@ -489,9 +535,11 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 }
                                             />
 
-                                            <span>Tuesday</span>
+                                            Tue
                                         </label>
-                                        <label style="margin-right:5px;">
+                                    </p>
+                                    <p class="control">
+                                        <label class="checkbox">
                                             <input
                                                 type="checkbox"
                                                 value="wednesday"
@@ -508,9 +556,11 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 }
                                             />
 
-                                            <span>Wednesday</span>
+                                            Wed
                                         </label>
-                                        <label style="margin-right:5px;">
+                                    </p>
+                                    <p class="control">
+                                        <label class="checkbox">
                                             <input
                                                 type="checkbox"
                                                 value="thursday"
@@ -527,9 +577,11 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 }
                                             />
 
-                                            <span>Thursday</span>
+                                            Thu
                                         </label>
-                                        <label style="margin-right:5px;">
+                                    </p>
+                                    <p class="control">
+                                        <label class="checkbox">
                                             <input
                                                 type="checkbox"
                                                 value="friday"
@@ -546,9 +598,11 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 }
                                             />
 
-                                            <span>Friday</span>
+                                            Fri
                                         </label>
-                                        <label style="margin-right:5px;">
+                                    </p>
+                                    <p class="control">
+                                        <label class="checkbox">
                                             <input
                                                 type="checkbox"
                                                 value="saturday"
@@ -565,9 +619,11 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 }
                                             />
 
-                                            <span>Saturday</span>
+                                            Sat
                                         </label>
-                                        <label style="margin-right:5px;">
+                                    </p>
+                                    <p class="control">
+                                        <label class="checkbox">
                                             <input
                                                 type="checkbox"
                                                 value="sunday"
@@ -585,19 +641,20 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 }
                                             />
 
-                                            <span>Sunday</span>
+                                            Sun
                                         </label>
-                                    </div>
+                                    </p>
                                 </div>
                             </Show>
                             <Show
                                 when=move || { repetition_type.get() == "monthly" }
                                 fallback=|| {}
                             >
-                                <div class="row">
-                                    <div class="col s1">On day</div>
-                                    <div class="col s3 input-field">
+                                <div class="field is-grouped">
+                                    <p class="control">On day</p>
+                                    <p class="control">
                                         <input
+                                            class="input"
                                             type="number"
                                             value=month_day
                                             min=1
@@ -610,68 +667,91 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                             }
                                         />
 
-                                    </div>
+                                    </p>
                                 </div>
                             </Show>
-                            <div class="row">
-                                <div class="col s6 input-field">
-                                    "End" <p>
-                                        <label>
-                                            <input
-                                                name="end"
-                                                type="radio"
-                                                on:click=move |_| end_type.set(EndType::Occurences)
-                                                checked
-                                            />
-                                            <span>
-                                                "After"
-                                                <input
-                                                    type="number"
-                                                    value=occurences
-                                                    min=1
-                                                    max=31
-                                                    on:change=move |ev| {
-                                                        occurences
-                                                            .update(|v| {
-                                                                *v = event_target_value(&ev).parse().unwrap();
-                                                            })
-                                                    }
-                                                />
-                                                "occurences"
-                                            </span>
-                                        </label>
-                                    </p> <p>
-                                        <label>
-                                            <input
-                                                name="end"
-                                                type="radio"
-                                                on:click=move |_| end_type.set(EndType::EndDate)
-                                            />
-                                            <span>
-                                                "On date"
-                                                <input
-                                                    type="date"
-                                                    value=end_date
-                                                    on:change=move |ev| {
-                                                        end_date
-                                                            .update(|v| {
-                                                                *v = Some(event_target_value(&ev));
-                                                            })
-                                                    }
-                                                />
+                            <div class="columns">
+                                <div class="column is-narrow">"End"</div>
+                                <div class="column">
+                                    <div class="columns">
+                                        <div class="column">
+                                            <div class="field is-grouped">
+                                                <p class="control">
+                                                    <label class="radio">
+                                                        <input
+                                                            name="end"
+                                                            type="radio"
+                                                            on:click=move |_| end_type.set(EndType::Occurences)
+                                                            checked
+                                                        />
+                                                    </label>
+                                                </p>
+                                                <p class="control">"After"</p>
+                                                <p class="control">
+                                                    <input
+                                                        class="input"
+                                                        type="number"
+                                                        value=occurences
+                                                        min=1
+                                                        max=31
+                                                        on:change=move |ev| {
+                                                            occurences
+                                                                .update(|v| {
+                                                                    *v = event_target_value(&ev).parse().unwrap();
+                                                                })
+                                                        }
+                                                    />
 
-                                            </span>
-                                        </label>
-                                    </p>
+                                                </p>
+                                                <p class="control">"occurences"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="columns">
+                                        <div class="column">
+                                            <div class="column">
+                                                <div class="field is-grouped">
+                                                    <p class="control">
+
+                                                        <label class="radio">
+                                                            <input
+                                                                name="end"
+                                                                type="radio"
+                                                                on:click=move |_| end_type.set(EndType::EndDate)
+                                                            />
+                                                        </label>
+                                                    </p>
+                                                    <p class="control">"On date"</p>
+                                                    <p class="control">
+                                                        <input
+                                                            class="input"
+                                                            type="date"
+                                                            value=end_date
+                                                            on:change=move |ev| {
+                                                                end_date
+                                                                    .update(|v| {
+                                                                        *v = Some(event_target_value(&ev));
+                                                                    })
+                                                            }
+                                                        />
+
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn waves-effect waves-light">
-                            <i class="material-symbols-rounded right">save</i>
-                            Add
-                        </button>
+                        <div class="modal-card-foot">
+                            <button class="button" on:click=close>
+                                Cancel
+                            </button>
+                            <button type="submit" class="button is-success">
+                                <i class="material-symbols-rounded right">save</i>
+                                Add
+                            </button>
+                        </div>
                     </div>
                 </div>
             </Form>

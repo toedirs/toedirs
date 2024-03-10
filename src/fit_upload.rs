@@ -124,46 +124,49 @@ pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> imp
     let on_submit = move |_ev: SubmitEvent| {
         show_set(false);
     };
+    let close = move |_| show_set(false);
     leptos::view! {
         <Show when=move || { show() } fallback=|| { }>
-                <Form
-                    action="/api/upload_fit_file"
-                    method="POST"
-                    enctype="multipart/form-data".to_string()
-                    on:submit=on_submit
-                >
-            <div
-                class="modal"
-                style="z-index: 1003;"
+            <Form
+                action="/api/upload_fit_file"
+                method="POST"
+                enctype="multipart/form-data".to_string()
+                on:submit=on_submit
             >
-                <div class="modal-header">
-                        <h4 class="black-text">"Upload Fit File"</h4>
-                </div>
-                    <div class="modal-body">
-                        <div
-                            class="modal-content">
-                            <div class="row">
-                                <div class="col s12 input-field file-field">
-                                    <div class="btn">
-                                        <span>File</span>
-                                        <input type="file" name="fit_file" multiple/>
-                                    </div>
-                                    <div class="file-path-wrapper">
-                                        <input class="file-path validate" type="text"/>
-                                    </div>
-                                </div>
+                <div
+                    class="modal is-active"
+                >
+                <div class="modal-background" on:click=close></div>
+                <div class="modal-card">
+                    <div class="modal-card-head">
+                            <p class="modal-card-title">"Upload Fit File"</p>
+                            <button class="delete" aria-label="close" on:click=close></button>
+                    </div>
+                        <div class="modal-card-body">
+                            <div class="file">
+                                <label class="file-label">
+                                    <input class="file-input" type="file" name="fit_file" multiple />
+                                    <span class="file-cta">
+                                        <span class="file-icon">
+                                            <i class="fas fa-upload"></i>
+                                        </span>
+                                        <span class="file-label">
+                                            Choose Fit Files...
+                                        </span>
+                                    </span>
+                                </label>
                             </div>
                         </div>
+                        <div class="modal-card-foot">
+                            <button type="submit" class="button is-success">
+                                <i class="material-symbols-rounded right">upload</i>
+                                Upload
+                            </button>
+                            <button class="button" on:click=close>Cancel</button>
+                        </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn waves-effect waves-light">
-                            <i class="material-symbols-rounded right">upload</i>
-                            Upload
-                        </button>
-                    </div>
-            </div>
-                </Form>
-            <div class="modal-overlay" style="z-index: 1002; display: block; opacity: 0.5;" on:click=move |_|{show_set(false)}></div>
+                </div>
+            </Form>
         </Show>
     }
 }

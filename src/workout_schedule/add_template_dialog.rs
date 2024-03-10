@@ -38,65 +38,89 @@ impl Default for Parameter {
 pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
     let select_name = format!("param[{}][param_type]", param.key).to_string();
     view! {
-        <div class="row workout-parameter" draggable="true">
-            <input
-                type="hidden"
-                name=move || format!("param[{}][position]", param.key)
-                value=param.order
-            />
+        <div class="workout-parameter" draggable="true">
+            <div class="columns">
+                <input
+                    type="hidden"
+                    name=move || format!("param[{}][position]", param.key)
+                    value=param.order
+                />
 
-            <div class="col s12">
-                <div class="row">
-                    <div class="col s12">
-                        <label for=move || format!("name-{}", param.key)>Name</label>
-                        <input
-                            id=move || format!("name-{}", param.key)
-                            name=move || format!("param[{}][name]", param.key)
-                            type="text"
-                            value=param.name
-                        />
+                <div class="column is-fullwidth">
+                    <div class="box">
+                        <div class="field">
+                            <label class="label is-small" for=move || format!("name-{}", param.key)>
+                                <span class="icon-text">
+                                    <span class="icon has-text-black">
+                                        <i class="fas fa-grip-vertical"></i>
+                                    </span>
+                                    Name
+                                </span>
+                            </label>
+                            <div class="control">
+                                <input
+                                    class="input is-small"
+                                    id=move || format!("name-{}", param.key)
+                                    name=move || format!("param[{}][name]", param.key)
+                                    type="text"
+                                    value=param.name
+                                />
 
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s4">
-                        <input
-                            type="number"
-                            name=move || format!("param[{}][value]", param.key)
-                            min="1"
-                            value=param.value
-                        />
+                            </div>
+                        </div>
+                        <div class="field is-grouped">
+                            <p class="control">
+                                <input
+                                    class="input is-small"
+                                    type="number"
+                                    name=move || format!("param[{}][value]", param.key)
+                                    min="1"
+                                    value=param.value
+                                />
 
-                    </div>
-                    <div class="col s4">
-                        <Select
-                            value=param.param_type
-                            name=select_name
-                            options=None
-                            attr:id="parameter_type"
-                        >
-                            <option value="time_s">Time</option>
-                            <option value="distance_m">Distance(m)</option>
-                            <option value="trainingload">TrainingLoad</option>
-                        </Select>
-                    </div>
-                    <div class="col s4 switch">
-                        <input
-                            type="hidden"
-                            name=move || format!("param[{}][scaling]", param.key)
-                            value=move || if param.scaling.get() { "true" } else { "false" }
-                        />
-                        <label>
-                            Scaling
-                            <input
-                                type="checkbox"
-                                checked=param.scaling
-                                on:change=move |_| {
-                                    param.scaling.update(|v| *v = !*v);
-                                }
-                            />
-                            <span class="lever"></span>
-                        </label>
+                            </p>
+                            <p class="control">
+                                <div class="select is-small">
+                                    <select
+                                        value=param.param_type
+                                        name=select_name
+                                        id="parameter_type"
+                                    >
+                                        <option value="time_s">Time</option>
+                                        <option value="distance_m">Distance(m)</option>
+                                        <option value="trainingload">TrainingLoad</option>
+                                    </select>
+                                </div>
+                            // <Select
+                            // value=param.param_type
+                            // name=select_name
+                            // options=None
+                            // attr:id="parameter_type"
+                            // >
+                            // <option value="time_s">Time</option>
+                            // <option value="distance_m">Distance(m)</option>
+                            // <option value="trainingload">TrainingLoad</option>
+                            // </Select>
+                            </p>
+                            <p class="control">
+                                <input
+                                    type="hidden"
+                                    name=move || format!("param[{}][scaling]", param.key)
+                                    value=move || if param.scaling.get() { "true" } else { "false" }
+                                />
+                                <label class="radio is-small">
+                                    <input
+                                        type="checkbox"
+                                        checked=param.scaling
+                                        on:change=move |_| {
+                                            param.scaling.update(|v| *v = !*v);
+                                        }
+                                    />
+
+                                    Scaling
+                                </label>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -204,225 +228,228 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         false,
     );
     let name_ref = create_node_ref::<Label>();
+    let close = move |_| show.set(false);
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <ActionForm action=create_workout_action on:submit=on_submit>
-                <div class="modal" style="z-index: 1003; ">
-                    <div class="modal-header">
-                        <h4 class="black-text">"Create workout"</h4>
+                <div class="modal is-active">
+                    <div class="modal-background" on:click=close></div>
+                    <div class="modal-card">
+                        <div class="modal-card-head">
+                            <p class="modal-card-title">"Create workout"</p>
+                            <button class="delete" aria-label="close" on:click=close></button>
 
-                    </div>
-                    <div class="modal-body">
-                        <div class="modal-content">
-                            <div class="row">
-                                <div class="col s6 input-field">
-                                    <input
-                                        id="name"
-                                        name="name"
-                                        type="text"
-                                        on:focusin=move |_| {
-                                            let _ = name_ref.get_untracked().unwrap().classes("active");
-                                        }
+                        </div>
+                        <div class="modal-card-body">
+                            <div class="field">
+                                <label class="label" for="name">
+                                    Name
+                                </label>
+                                <div class="control">
+                                    <input class="input" id="name" name="name" type="text"/>
 
-                                        on:focusout=move |ev| {
-                                            if event_target_value(&ev).len() == 0 {
-                                                let _ = name_ref
-                                                    .get_untracked()
-                                                    .unwrap()
-                                                    .class_list()
-                                                    .remove_1("active");
-                                            }
-                                        }
-                                    />
-
-                                    <label ref=name_ref for="name">
-                                        Name
-                                    </label>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col s6 input-field">
-                                    <Select
-                                        value=select_value
-                                        name="workout_type".to_string()
-                                        options=None
-                                        attr:id="workout_type"
-                                    >
-                                        <option value="" disabled selected>
-                                            Choose workout type
-                                        </option>
-                                        <option value="run">
-                                            <i class="material-symbols-rounded">directions_run</i>
-                                            Run
-                                        </option>
-                                        <option value="strength">
-                                            <i class="material-symbols-rounded">fitness_center</i>
-                                            Strength
-                                        </option>
-                                        <option value="cycling">
-                                            <i class="material-symbols-rounded">directions_bike</i>
-                                            Cycling
-                                        </option>
-                                        <option value="hiking">
-                                            <i class="material-symbols-rounded">directions_walk</i>
-                                            Hike
-                                        </option>
-                                        <option value="endurance">
-                                            <i class="material-symbols-rounded">directions_walk</i>
-                                            General Endurance
-                                        </option>
-                                    </Select>
-                                    <label for="workout_type">Type</label>
-                                </div>
-                                <div class="row">
-                                    <div class="col s12">
-                                        <For each=workout_parameters key=|s| s.key let:child>
-                                            <WorkoutParameter
-                                                param=child.clone()
-                                                on:dragstart=move |ev: DragEvent| {
-                                                    let dt = ev.data_transfer().unwrap();
-                                                    dt.set_data("key", child.key.to_string().as_str()).unwrap();
-                                                }
-
-                                                on:dragover=move |ev: DragEvent| {
-                                                    ev.prevent_default();
-                                                    let dt = ev.data_transfer().unwrap();
-                                                    let drag_key = dt
-                                                        .get_data("key")
-                                                        .unwrap()
-                                                        .parse::<u32>()
-                                                        .unwrap();
-                                                    if drag_key == child.key {
-                                                        return;
-                                                    }
-                                                    let src_index = workout_parameters
-                                                        .get_untracked()
-                                                        .iter()
-                                                        .position(|e| e.key == drag_key)
-                                                        .unwrap();
-                                                    let tgt_index = workout_parameters
-                                                        .get_untracked()
-                                                        .iter()
-                                                        .position(|e| e.key == child.key)
-                                                        .unwrap();
-                                                    let tgt = ev.target().unwrap();
-                                                    let parent = tgt
-                                                        .dyn_ref::<HtmlElement>()
-                                                        .unwrap()
-                                                        .closest(".workout-parameter")
-                                                        .unwrap()
-                                                        .unwrap();
-                                                    let cls_name = parent.class_name();
-                                                    let mut cls = cls_name.split(" ").collect::<Vec<_>>();
-                                                    if !cls.contains(&"drag-over") {
-                                                        cls.push("drag-over");
-                                                        if src_index > tgt_index {
-                                                            cls.push("before");
-                                                        } else {
-                                                            cls.push("after");
-                                                        }
-                                                        let cls_name = cls.join(" ");
-                                                        parent.set_class_name(cls_name.as_str());
-                                                    }
-                                                }
-
-                                                on:dragleave=move |ev: DragEvent| {
-                                                    let tgt = ev.target().unwrap();
-                                                    let parent = tgt
-                                                        .dyn_ref::<HtmlElement>()
-                                                        .unwrap()
-                                                        .closest(".workout-parameter")
-                                                        .unwrap()
-                                                        .unwrap();
-                                                    let cls_name = parent.class_name();
-                                                    let cls = cls_name.split(" ").collect::<Vec<_>>();
-                                                    if cls.contains(&"drag-over") {
-                                                        let cls_name = cls
-                                                            .iter()
-                                                            .filter(|&v| {
-                                                                v != &"drag-over" && v != &"after" && v != &"before"
-                                                            })
-                                                            .map(|v| *v)
-                                                            .collect::<Vec<_>>()
-                                                            .join(" ");
-                                                        parent.set_class_name(cls_name.as_str());
-                                                    }
-                                                }
-
-                                                on:drop=move |ev: DragEvent| {
-                                                    ev.prevent_default();
-                                                    let dt = ev.data_transfer().unwrap();
-                                                    let drag_key = dt
-                                                        .get_data("key")
-                                                        .unwrap()
-                                                        .parse::<u32>()
-                                                        .unwrap();
-                                                    let tgt = ev.target().unwrap();
-                                                    let parent = tgt
-                                                        .dyn_ref::<HtmlElement>()
-                                                        .unwrap()
-                                                        .closest(".workout-parameter")
-                                                        .unwrap()
-                                                        .unwrap();
-                                                    let cls_name = parent.class_name();
-                                                    let cls = cls_name.split(" ").collect::<Vec<_>>();
-                                                    if cls.contains(&"drag-over") {
-                                                        let cls_name = cls
-                                                            .iter()
-                                                            .filter(|&v| {
-                                                                v != &"drag-over" && v != &"before" && v != &"after"
-                                                            })
-                                                            .map(|v| *v)
-                                                            .collect::<Vec<_>>()
-                                                            .join(" ");
-                                                        parent.set_class_name(cls_name.as_str());
-                                                    }
-                                                    if child.key == drag_key {
-                                                        return;
-                                                    }
-                                                    workout_parameters
-                                                        .update(|v| {
-                                                            let src_index = v
-                                                                .iter()
-                                                                .position(|e| e.key == drag_key)
-                                                                .unwrap();
-                                                            let tgt_index = v
-                                                                .iter()
-                                                                .position(|e| e.key == child.key)
-                                                                .unwrap();
-                                                            let el = v.remove(src_index);
-                                                            v.insert(tgt_index, el);
-                                                            for i in 0..v.len() {
-                                                                v[i].order.set(i as u32);
-                                                            }
-                                                        });
-                                                }
-                                            />
-
-                                        </For>
-                                        <div class="row">
-                                            <div class="col s2 offset-s5 center-align">
-                                                <a
-                                                    class="btn-floating btn-large teal"
-                                                    on:click=move |_| {
-                                                        workout_parameter_index.update(|v| *v = *v + 1)
-                                                    }
-                                                >
-
-                                                    <i class="large material-symbols-rounded">add</i>
-                                                </a>
-                                            </div>
-                                        </div>
+                            <div class="field">
+                                <label class="label" for="workout_type">
+                                    Type
+                                </label>
+                                <div class="control">
+                                    <div class="select">
+                                        <select name="workout_type">
+                                            <option value="" disabled selected>
+                                                Choose Workout Type
+                                            </option>
+                                            <option value="run">Run</option>
+                                            <option value="strength">Strength</option>
+                                            <option value="cycling">Cycling</option>
+                                            <option value="hiking">Hiking</option>
+                                            <option value="enduarnce">General Endurance</option>
+                                        </select>
                                     </div>
+                                </div>
+                            // <Select
+                            // value=select_value
+                            // name="workout_type".to_string()
+                            // options=None
+                            // attr:id="workout_type"
+                            // >
+                            // <option value="" disabled selected>
+                            // Choose workout type
+                            // </option>
+                            // <option value="run">
+                            // <i class="material-symbols-rounded">directions_run</i>
+                            // Run
+                            // </option>
+                            // <option value="strength">
+                            // <i class="material-symbols-rounded">fitness_center</i>
+                            // Strength
+                            // </option>
+                            // <option value="cycling">
+                            // <i class="material-symbols-rounded">directions_bike</i>
+                            // Cycling
+                            // </option>
+                            // <option value="hiking">
+                            // <i class="material-symbols-rounded">directions_walk</i>
+                            // Hike
+                            // </option>
+                            // <option value="endurance">
+                            // <i class="material-symbols-rounded">directions_walk</i>
+                            // General Endurance
+                            // </option>
+                            // </Select>
+                            </div>
+                            <div class="columns">
+                                <div class="column is-full-width">
+                                    <For each=workout_parameters key=|s| s.key let:child>
+                                        <WorkoutParameter
+                                            param=child.clone()
+                                            on:dragstart=move |ev: DragEvent| {
+                                                let dt = ev.data_transfer().unwrap();
+                                                dt.set_data("key", child.key.to_string().as_str()).unwrap();
+                                            }
+
+                                            on:dragover=move |ev: DragEvent| {
+                                                ev.prevent_default();
+                                                let dt = ev.data_transfer().unwrap();
+                                                let drag_key = dt
+                                                    .get_data("key")
+                                                    .unwrap()
+                                                    .parse::<u32>()
+                                                    .unwrap();
+                                                if drag_key == child.key {
+                                                    return;
+                                                }
+                                                let src_index = workout_parameters
+                                                    .get_untracked()
+                                                    .iter()
+                                                    .position(|e| e.key == drag_key)
+                                                    .unwrap();
+                                                let tgt_index = workout_parameters
+                                                    .get_untracked()
+                                                    .iter()
+                                                    .position(|e| e.key == child.key)
+                                                    .unwrap();
+                                                let tgt = ev.target().unwrap();
+                                                let parent = tgt
+                                                    .dyn_ref::<HtmlElement>()
+                                                    .unwrap()
+                                                    .closest(".workout-parameter")
+                                                    .unwrap()
+                                                    .unwrap();
+                                                let cls_name = parent.class_name();
+                                                let mut cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                if !cls.contains(&"drag-over") {
+                                                    cls.push("drag-over");
+                                                    if src_index > tgt_index {
+                                                        cls.push("before");
+                                                    } else {
+                                                        cls.push("after");
+                                                    }
+                                                    let cls_name = cls.join(" ");
+                                                    parent.set_class_name(cls_name.as_str());
+                                                }
+                                            }
+
+                                            on:dragleave=move |ev: DragEvent| {
+                                                let tgt = ev.target().unwrap();
+                                                let parent = tgt
+                                                    .dyn_ref::<HtmlElement>()
+                                                    .unwrap()
+                                                    .closest(".workout-parameter")
+                                                    .unwrap()
+                                                    .unwrap();
+                                                let cls_name = parent.class_name();
+                                                let cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                if cls.contains(&"drag-over") {
+                                                    let cls_name = cls
+                                                        .iter()
+                                                        .filter(|&v| {
+                                                            v != &"drag-over" && v != &"after" && v != &"before"
+                                                        })
+                                                        .map(|v| *v)
+                                                        .collect::<Vec<_>>()
+                                                        .join(" ");
+                                                    parent.set_class_name(cls_name.as_str());
+                                                }
+                                            }
+
+                                            on:drop=move |ev: DragEvent| {
+                                                ev.prevent_default();
+                                                let dt = ev.data_transfer().unwrap();
+                                                let drag_key = dt
+                                                    .get_data("key")
+                                                    .unwrap()
+                                                    .parse::<u32>()
+                                                    .unwrap();
+                                                let tgt = ev.target().unwrap();
+                                                let parent = tgt
+                                                    .dyn_ref::<HtmlElement>()
+                                                    .unwrap()
+                                                    .closest(".workout-parameter")
+                                                    .unwrap()
+                                                    .unwrap();
+                                                let cls_name = parent.class_name();
+                                                let cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                if cls.contains(&"drag-over") {
+                                                    let cls_name = cls
+                                                        .iter()
+                                                        .filter(|&v| {
+                                                            v != &"drag-over" && v != &"before" && v != &"after"
+                                                        })
+                                                        .map(|v| *v)
+                                                        .collect::<Vec<_>>()
+                                                        .join(" ");
+                                                    parent.set_class_name(cls_name.as_str());
+                                                }
+                                                if child.key == drag_key {
+                                                    return;
+                                                }
+                                                workout_parameters
+                                                    .update(|v| {
+                                                        let src_index = v
+                                                            .iter()
+                                                            .position(|e| e.key == drag_key)
+                                                            .unwrap();
+                                                        let tgt_index = v
+                                                            .iter()
+                                                            .position(|e| e.key == child.key)
+                                                            .unwrap();
+                                                        let el = v.remove(src_index);
+                                                        v.insert(tgt_index, el);
+                                                        for i in 0..v.len() {
+                                                            v[i].order.set(i as u32);
+                                                        }
+                                                    });
+                                            }
+                                        />
+
+                                    </For>
+                                </div>
+                            </div>
+                            <div class="columns is-centered">
+                                <div class="column is-narrow">
+                                    <a
+                                        class="button"
+                                        on:click=move |_| {
+                                            workout_parameter_index.update(|v| *v = *v + 1)
+                                        }
+                                    >
+
+                                        <i class="large material-symbols-rounded">add</i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn waves-effect waves-light">
-                            <i class="material-symbols-rounded right">save</i>
-                            Create
-                        </button>
+                        <div class="modal-card-foot">
+                            <button class="button" on:click=close>
+                                Cancel
+                            </button>
+                            <button type="submit" class="button is-success">
+                                <i class="material-symbols-rounded right">save</i>
+                                Create
+                            </button>
+                        </div>
                     </div>
                 </div>
             </ActionForm>

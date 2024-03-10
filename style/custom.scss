@@ -1,5 +1,27 @@
-[aria-current="page"] {
-  @extend .active;
+// [aria-current="page"] {
+//   @extend .active;
+// }
+
+.card.is-fullwidth {
+  width: 100%;
+}
+
+.button {
+
+  &.is-small-circle {
+    @include delete;
+
+    color: $scheme-main;
+
+    &::before {
+      display: none;
+    }
+
+    .icon {
+      width: 15px;
+      height: 15px;
+    }
+  }
 }
 
 .calendar-row {
@@ -15,10 +37,11 @@
 
   }
 
-  .col {
+  >.column {
     border-width: 1px 1px 0 0;
     border-color: #CCCCCC;
     border-style: solid;
+    overflow-wrap: anywhere;
 
     .row {
       margin-left: 0px;
@@ -56,53 +79,14 @@ nav {
   flex: 0 1 auto;
 }
 
-nav .nav-wrapper .btn i {
-  line-height: inherit;
-}
 
 main {
   flex: 1;
   overflow: auto;
 }
 
-div.select-dropdown.dropdown-trigger {
-  width: 100%;
-  font-size: 16px;
-  height: 100%;
-}
-
-.input-field div.select-wrapper+label {
-  transform: scale(.75);
-  top: 8px;
-}
-
-.input-field div.select-wrapper {
-  box-sizing: border-box;
-  // padding: 0 16px;
-  // padding-top: 20px;
-  border: none;
-  border-radius: 4px;
-  border-bottom: 1px solid;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  height: 3rem;
-  width: 100%;
-}
 
 .workout-parameter {
-  div {
-    background: #EEE;
-  }
-
-  input[type="text"],
-  input[type="number"] {
-    height: 1em;
-  }
-
-  .input-field {
-    margin-top: 0;
-    margin-bottom: 0;
-  }
 
   &::before,
   &::after {
@@ -119,5 +103,21 @@ div.select-dropdown.dropdown-trigger {
   &.drag-over.after::after {
     background-color: #AAA;
     height: 15px;
+  }
+}
+
+.is-fab {
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  z-index: 5;
+
+  :hover {
+    color: bulmaDarken($primary, 2.5%);
+  }
+
+  .dropdown-menu {
+    left: auto;
+    right: 0;
   }
 }

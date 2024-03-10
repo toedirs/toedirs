@@ -54,6 +54,8 @@ pub fn App() -> impl IntoView {
 
         // sets the document title
         <Title text="Welcome to Toedi"/>
+        <Meta charset="utf-8"/>
+        <Meta name="viewport" content="width=device-width, initial-scale=1"/>
 
         // content for this welcome page
         <Router fallback=|| {
@@ -90,47 +92,49 @@ pub fn App() -> impl IntoView {
                                 {move || match user.get() {
                                     Some(true) => {
                                         view! {
-                                            <nav class="teal lighten-2">
-                                                <div class="nav-wrapper">
-                                                    <a href="#" class="brand-logo">
+                                            <nav
+                                                class="navbar is-black"
+                                                role="navigation"
+                                                aria-label="main navigation"
+                                            >
+                                                <div class="navbar-brand">
+                                                    <a href="/" class="navbar-item">
                                                         Toedi
                                                     </a>
-                                                    <ul id="nav-mobile" class="right hide-on-med-and-down">
-                                                        <li>
+                                                </div>
+                                                <div class="navbar-menu">
+                                                    <div class="navbar-start">
 
-                                                            <A href="/" class="">
-                                                                Overview
-                                                            </A>
-                                                        </li>
-                                                        <li>
+                                                        <A href="/" class="navbar-item">
+                                                            Overview
+                                                        </A>
 
-                                                            <A href="/activities" class="">
-                                                                Activities
-                                                            </A>
-                                                        </li>
-                                                        <li>
+                                                        <A href="/activities" class="navbar-item">
+                                                            Activities
+                                                        </A>
 
-                                                            <A href="/calendar" class="">
-                                                                Calendar
-                                                            </A>
-                                                        </li>
-                                                        <li>
-                                                            <a
-                                                                class="waves-effect waves-light btn"
-                                                                on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
-                                                            >
-                                                                Upload
-                                                                <i class="material-symbols-rounded right">upload</i>
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <ActionForm action=logout>
-                                                                <button type="submit" class="btn-flat waves-effect">
-                                                                    "Log Out"
-                                                                </button>
-                                                            </ActionForm>
-                                                        </li>
-                                                    </ul>
+                                                        <A href="/calendar" class="navbar-item">
+                                                            Calendar
+                                                        </A>
+                                                    </div>
+                                                    <div class="navbar-end">
+                                                        <div class="navbar-item">
+                                                            <div class="buttons">
+                                                                <a
+                                                                    class="button is-primary"
+                                                                    on:click=move |_| { set_show_upload.update(|v| *v = !*v) }
+                                                                >
+                                                                    Upload
+                                                                    <i class="material-symbols-rounded right">upload</i>
+                                                                </a>
+                                                                <ActionForm action=logout>
+                                                                    <button type="submit" class="button">
+                                                                        "Log Out"
+                                                                    </button>
+                                                                </ActionForm>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </nav>
                                             <main>
@@ -196,55 +200,82 @@ fn Overview() -> impl IntoView {
     });
     view! {
         <div class="container">
-            <div class="row">
-                <div class="col s6">
-                    <input
-                        type="date"
-                        value=from_date
-                        on:change=move |ev| {
-                            from_date
-                                .update(|v| {
-                                    *v = Some(event_target_value(&ev));
-                                })
-                        }
-                    />
+            <div class="columns">
+                <div class="column">
 
-                    <label for="from_date">From</label>
-                </div>
-                <div class="col s6">
-                    <input
-                        type="date"
-                        value=to_date
-                        on:change=move |ev| {
-                            to_date
-                                .update(|v| {
-                                    *v = Some(event_target_value(&ev));
-                                })
-                        }
-                    />
+                    <div class="field">
+                        <label for="from_date">From</label>
+                        <div class="control">
+                            <input
+                                class="input"
+                                type="date"
+                                value=from_date
+                                on:change=move |ev| {
+                                    from_date
+                                        .update(|v| {
+                                            *v = Some(event_target_value(&ev));
+                                        })
+                                }
+                            />
 
-                    <label for="to_date">To</label>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col s12 m6 l4 p-1">
-                    <div class="card">
-                        <div class="card-content teal white-text">
-                            <span class="card-title">Hearrate Zones</span>
-                            <HeartrateSummaryChart from=from_memo to=to_memo/>
                         </div>
                     </div>
                 </div>
-                <div class="col s12 m6 l4 p-1">
-                    <div class="card">
-                        <div class="card-content teal white-text">
-                            <span class="card-title">Training LoadChart</span>
+                <div class="column">
+                    <div class="field">
+                        <label for="to_date">To</label>
+                        <div class="control">
+                            <input
+                                class="input"
+                                type="date"
+                                value=to_date
+                                on:change=move |ev| {
+                                    to_date
+                                        .update(|v| {
+                                            *v = Some(event_target_value(&ev));
+                                        })
+                                }
+                            />
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="columns is-variable is-1">
+                <div class="column is-flex">
+                    <div class="card is-fullwidth">
+                        <div class="card-header">
+                            <p class="card-header-title">Hearrate Zones</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="content">
+                                <HeartrateSummaryChart from=from_memo to=to_memo/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="column is-flex">
+                    <div class="card is-fullwidth">
+                        <div class="card-header">
+                            <p class="card-header-title">Training LoadChart</p>
+                        </div>
+                        <div class="card-content ">
                             <TrainingLoadChart from=from_memo to=to_memo/>
                         </div>
                     </div>
                 </div>
-                <div class="col s12 m6 l4 p-1">
-                    <div class="card-panel teal">Fitness & Fatigue</div>
+                <div class="column is-flex">
+                    <div class="card is-fullwidth">
+                        <div class="card-header">
+                            <p class="card-header-title">Fitness & Fatigue</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="content">
+                                <div class="block">test</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -253,78 +284,49 @@ fn Overview() -> impl IntoView {
 
 #[component]
 fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
-    let name_ref = create_node_ref::<Label>();
-    let passwd_ref = create_node_ref::<Label>();
     view! {
         <ActionForm action=action>
-            <div class="row">
-                <div class="col s12">
-                    <h1>"Log In"</h1>
-                </div>
-            </div>
-            <div class="row">
-                <div class="input-field col s12">
+            <h1 class="title">"Log In"</h1>
+            <div class="field">
+                <label for="username">"User ID:"</label>
+                <div class="control">
                     <input
+                        class="input"
                         type="text"
                         placeholder="User ID"
                         maxlength="32"
                         name="username"
                         id="username"
-                        on:focusin=move |_| {
-                            name_ref.get_untracked().unwrap().classes("active");
-                        }
-
-                        on:focusout=move |ev| {
-                            if event_target_value(&ev).len() == 0 {
-                                name_ref.get_untracked().unwrap().class_list().remove_1("active");
-                            }
-                        }
                     />
 
-                    <label ref=name_ref for="username">
-                        "User ID:"
-                    </label>
                 </div>
             </div>
-            <div class="row">
-                <div class="input-field col s12">
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        name="password"
-                        on:focusin=move |_| {
-                            passwd_ref.get_untracked().unwrap().classes("active");
-                        }
+            <div class="field">
+                <label for="password">"Password:"</label>
+                <div class="control">
+                    <input class="input" type="password" placeholder="Password" name="password"/>
 
-                        on:focusout=move |ev| {
-                            if event_target_value(&ev).len() == 0 {
-                                passwd_ref.get_untracked().unwrap().class_list().remove_1("active");
-                            }
-                        }
-                    />
-
-                    <label ref=passwd_ref for="password">
-                        "Password:"
-                    </label>
                 </div>
             </div>
-            <div class="row">
-                <div class="col s12">
+            <div class="field">
+                <div class="control">
                     <label>
                         <input type="checkbox" name="remember"/>
-                        <span>"Remember me?"</span>
+                        "Remember me?"
                     </label>
                 </div>
             </div>
-            <div class="row">
-                <div class="col s12">
-                    <button type="submit" class="btn waves-effect waves-light">
+            <div class="field is-grouped">
+                <p class="control">
+                    <button type="submit" class="button is-primary">
                         "Log In"
                     </button>
-                    <A href="/home/signup" class="waves-effect waves-light grey-darken-2 btn">
+                </p>
+                <p class="control">
+                    <A href="/home/signup" class="button">
                         Signup
                     </A>
-                </div>
+                </p>
             </div>
         </ActionForm>
     }
@@ -332,116 +334,70 @@ fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
 
 #[component]
 fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
-    let name_ref = create_node_ref::<Label>();
-    let passwd_ref = create_node_ref::<Label>();
-    let passwd2_ref = create_node_ref::<Label>();
     view! {
         <ActionForm action=action>
-            <div class="row">
-                <div class="col s12">
-                    <h1>"Sign Up"</h1>
-                </div>
-            </div>
-            <div class="row">
-                <div class="input-field col s12">
+            <h1 class="title">"Sign Up"</h1>
+            <div class="field">
+                <label for="username">"User ID:"</label>
+                <div class="control">
                     <input
+                        class="input"
                         type="text"
                         placeholder="User ID"
                         maxlength="32"
                         name="username"
                         id="username"
-                        on:focusin=move |_| {
-                            let _ = name_ref.get_untracked().unwrap().classes("active");
-                        }
-
-                        on:focusout=move |ev| {
-                            if event_target_value(&ev).len() == 0 {
-                                let _ = name_ref
-                                    .get_untracked()
-                                    .unwrap()
-                                    .class_list()
-                                    .remove_1("active");
-                            }
-                        }
                     />
 
-                    <label ref=name_ref for="username">
-                        "User ID:"
-                    </label>
                 </div>
             </div>
-            <div class="row">
-                <div class="input-field col s12">
+            <div class="field">
+                <label for="password">"Password:"</label>
+                <div class="control">
                     <input
+                        class="input"
                         type="password"
                         placeholder="Password"
                         name="password"
                         id="password"
-                        on:focusin=move |_| {
-                            let _ = passwd_ref.get_untracked().unwrap().classes("active");
-                        }
-
-                        on:focusout=move |ev| {
-                            if event_target_value(&ev).len() == 0 {
-                                let _ = passwd_ref
-                                    .get_untracked()
-                                    .unwrap()
-                                    .class_list()
-                                    .remove_1("active");
-                            }
-                        }
                     />
 
-                    <label ref=passwd_ref for="password">
-                        "Password:"
-                    </label>
                 </div>
             </div>
-            <div class="row">
-                <div class="input-field col s12">
+            <div class="field">
+                <label for="password_confirmation">"Confirm Password:"</label>
+                <div class="control">
                     <input
+                        class="input"
                         type="password"
                         placeholder="Password again"
                         name="password_confirmation"
                         id="password_confirmation"
-                        on:focusin=move |_| {
-                            let _ = passwd2_ref.get_untracked().unwrap().classes("active");
-                        }
-
-                        on:focusout=move |ev| {
-                            if event_target_value(&ev).len() == 0 {
-                                let _ = passwd2_ref
-                                    .get_untracked()
-                                    .unwrap()
-                                    .class_list()
-                                    .remove_1("active");
-                            }
-                        }
                     />
 
-                    <label ref=passwd2_ref for="password_confirmation">
-                        "Confirm Password:"
-                    </label>
                 </div>
             </div>
-            <div class="row">
-                <div class="col s12">
+            <div class="field">
+                <div class="control">
                     <label>
                         <input type="checkbox" name="remember"/>
-                        <span>"Remember me?"</span>
+                        "Remember me?"
                     </label>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col s12">
-                    <button type="submit" class="btn waves-effect waves-light">
+            <div class="field is-grouped">
+                <p class="control">
+                    <button type="submit" class="button is-primary">
                         "Sign Up"
                     </button>
-                    <A href="/home/login" class="btn waves-effect waves-light grey-darken-2">
+                </p>
+                <p class="control">
+
+                    <A href="/home/login" class="button">
                         Login
                     </A>
-                </div>
+                </p>
             </div>
         </ActionForm>
     }
@@ -450,23 +406,21 @@ fn Signup(action: Action<Signup, Result<(), ServerFnError>>) -> impl IntoView {
 #[component]
 pub fn Home() -> impl IntoView {
     view! {
-        <nav class="teal lighten-2">
-            <div class="nav-wrapper">
-                <a href="#" class="brand-logo">
+        <nav class="navbar is-black" role="navigation" aria-label="main navigation">
+            <div class="navbar-brand">
+                <a href="#" class="navbar-item">
                     Toedi
                 </a>
-                <ul id="nav-mobile" class="right hide-on-med-and-down">
-                    <li>
-                        <A href="/home/login" exact=true>
-                            Login
-                        </A>
-                    </li>
-                    <li>
-                        <A href="/home/signup" exact=true>
-                            Signup
-                        </A>
-                    </li>
-                </ul>
+            </div>
+            <div class="navbar-end">
+                <div class="buttons">
+                    <A href="/home/login" exact=true class="button is-primary">
+                        Login
+                    </A>
+                    <A href="/home/signup" exact=true class="button">
+                        Signup
+                    </A>
+                </div>
             </div>
         </nav>
         <main>
@@ -479,39 +433,43 @@ pub fn Home() -> impl IntoView {
 #[component]
 fn Landing() -> impl IntoView {
     view! {
-        <div class="row">
-            <div class="col s12">
-                <h1>Welcome to Toedi</h1>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col s4">
-                <div class="card m-1 small">
-                    <div class="card-content">
-                        <span class="card-title">Track your Training</span>
-                        <p>
-                            Always stay on top of your training effort with easy to read charts and metrics
-                        </p>
+        <div class="container">
+            <h1 class="title">Welcome to Toedi</h1>
+            <div class="columns">
+                <div class="column is-flex">
+                    <div class="card">
+                        <div class="card-header">
+                            <p class="card-header-title">Track your Training</p>
+                        </div>
+                        <div class="card-content">
+                            <p>
+                                Always stay on top of your training effort with easy to read charts and metrics
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col s4">
+                <div class="column is-flex">
 
-                <div class="card m-1 small">
-                    <div class="card-content">
-                        <span class="card-title">Based on Science</span>
-                        <p>
-                            "Based on newest scientific research, presented in a transparent way. We don't just make up numbers and we explain exactly how our metrics are calculated"
-                        </p>
+                    <div class="card">
+                        <div class="card-header">
+                            <p class="card-header-title">Based on Science</p>
+                        </div>
+                        <div class="card-content">
+                            <p>
+                                "Based on newest scientific research, presented in a transparent way. We don't just make up numbers and we explain exactly how our metrics are calculated"
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col s4">
+                <div class="column is-flex">
 
-                <div class="card m-1 small">
-                    <div class="card-content">
-                        <span class="card-title">Open Source</span>
-                        <p>Fully Open-Source code, made by users for users</p>
+                    <div class="card">
+                        <div class="card-header">
+                            <p class="card-header-title">Open Source</p>
+                        </div>
+                        <div class="card-content">
+                            <p>Fully Open-Source code, made by users for users</p>
+                        </div>
                     </div>
                 </div>
             </div>

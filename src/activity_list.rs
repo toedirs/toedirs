@@ -66,27 +66,33 @@ pub fn ActivityList() -> impl IntoView {
                                 }
                                 Ok(activities) => {
                                     view! {
-                                        <ul class="collection">
-                                            <For
-                                                each=move || activities.clone()
-                                                key=|e| e.id
-                                                let:activity
-                                            >
-                                                <li class="collection-item avatar">
-                                                    <span class="title">{activity.sport}</span>
-                                                    <p>
-                                                        {activity.start_time.format("%Y-%m-%d").to_string()} <br/>
-                                                        {format_duration(
-                                                                Duration::new(activity.duration.to_u64().unwrap(), 0),
-                                                            )
-                                                            .to_string()}
-                                                    </p>
-                                                    <a href="#!" class="secondary-content">
-                                                        <i class="material-symbols-rounded">send</i>
-                                                    </a>
-                                                </li>
-                                            </For>
-                                        </ul>
+                                        <For
+                                            each=move || activities.clone()
+                                            key=|e| e.id
+                                            let:activity
+                                        >
+                                            <div class="columns">
+                                                <div class="column is-full level">
+                                                    <div class="box level">
+                                                        <div class="level-left">
+                                                            <div class="block">
+                                                                <p class="title is-5">{activity.sport}</p>
+                                                                <p class="subtitle is-7">
+                                                                    {activity.start_time.format("%Y-%m-%d").to_string()} <br/>
+                                                                    {format_duration(
+                                                                            Duration::new(activity.duration.to_u64().unwrap(), 0),
+                                                                        )
+                                                                        .to_string()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <a href="#!" class="level-right">
+                                                            <i class="material-symbols-rounded">send</i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </For>
                                     }
                                         .into_view()
                                 }
