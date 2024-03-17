@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT \n            activities.id, \n            activities.start_time, \n            activities.duration,\n            COALESCE(string_agg(sessions.sport,', '),'General') as \"sport!\",\n            (\n                SELECT\n                    ARRAY_AGG(\n                        (\n                            laps.id, \n                            laps.start_time, \n                            laps.end_time, \n                            laps.distance::float8, \n                            laps.calories, \n                            laps.average_heartrate, \n                            laps.min_heartrate, \n                            laps.max_heartrate, \n                            laps.sport,\n                            laps.ascent, \n                            laps.descent\n                        )\n                    )\n                FROM laps\n                WHERE laps.activity_id = $2::bigint\n            ) as \"laps:Vec<Lap>\",\n            (\n                SELECT\n                    ARRAY_AGG(\n                        (\n                            records.timestamp,\n                            records.heartrate,\n                            records.latitude,\n                            records.longitude,\n                            records.distance::float8,\n                            records.speed::float8,\n                            records.altitude::float8\n                        )\n                        ORDER BY records.timestamp ASC\n                    ) \n                FROM records\n                WHERE records.activity_id = $2::bigint\n            ) as \"records!:Vec<Record>\"\n        FROM activities \n        JOIN sessions on sessions.activity_id=activities.id\n        WHERE activities.user_id = $1::bigint AND activities.id = $2::bigint\n        GROUP BY activities.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "start_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "duration",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "sport!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "laps:Vec<Lap>",
+        "type_info": "RecordArray"
+      },
+      {
+        "ordinal": 5,
+        "name": "records!:Vec<Record>",
+        "type_info": "RecordArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "5f6b2756fc631b4a2f414fc77825fef768955e8fad76d4a068153569f5a3e9cc"
+}

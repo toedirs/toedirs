@@ -6,6 +6,7 @@ use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Local};
 use humantime::format_duration;
 use leptos::*;
+use leptos_charts::{Color, Gradient, LineChart, LineChartOptions};
 use leptos_leaflet::*;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
@@ -97,6 +98,7 @@ pub async fn activity_details(id: i64) -> Result<ActivityDetail, ServerFnError> 
                             records.speed::float8,
                             records.altitude::float8
                         )
+                        ORDER BY records.timestamp ASC
                     ) 
                 FROM records
                 WHERE records.activity_id = $2::bigint
@@ -138,10 +140,16 @@ pub fn ActivityDetails(activity: RwSignal<Option<i64>>) -> impl IntoView {
                             .map(|detail| match detail {
                                 None => view! { <pre>"Error"</pre> }.into_view(),
                                 Some(detail) => {
+                                    let data = detail
+                                        .records
+                                        .iter()
+                                        .filter_map(|r| {
+                                            r.heartrate.map(|h| (r.timestamp.timestamp(), h))
+                                        })
+                                        .collect::<Vec<(i64, i16)>>();
                                     view! {
                                         <div class="modal-card is-full">
                                             <div class="modal-card-head">
-                                                // <p class="modal-card-title">{detail.sport}</p>
                                                 <div class="modal-card-title">
                                                     <p class="title is-4">{detail.sport}</p>
                                                     <p class="subtitle is-6">
@@ -160,7 +168,21 @@ pub fn ActivityDetails(activity: RwSignal<Option<i64>>) -> impl IntoView {
                                             </div>
                                             <div class="modal-card-body">
                                                 <div class="columns">
-                                                    <div class="column"></div>
+                                                    <div class="column">
+                                                        <LineChart
+                                                            values=data.into()
+                                                            options=Box::new(LineChartOptions {
+                                                                color: Box::new(Gradient {
+                                                                    from: Color::RGB(0, 255, 0),
+                                                                    to: Color::RGB(255, 0, 0),
+                                                                }),
+                                                                ..Default::default()
+                                                            })
+
+                                                            attr:style="width:100%;height:100%;min-height:500px;"
+                                                        />
+
+                                                    </div>
 
                                                     {
                                                         let coordinates: Option<Vec<(f64, f64)>> = detail
