@@ -121,3 +121,63 @@ main {
     right: 0;
   }
 }
+
+.modal {
+
+  .modal-content,
+  .modal-card {
+
+    @include mobile {
+
+      &.is-small,
+      &.is-medium,
+      &.is-large,
+      &.is-xlarge,
+      &.is-full {
+        max-width: 100%;
+      }
+    }
+
+    @include tablet {
+      &.is-small {
+        max-width: 768px;
+      }
+
+      &.is-medium,
+      &.is-large,
+      &.is-xlarge {
+        min-width: 769px;
+        max-width: 1023px;
+      }
+
+      &.is-full {
+        min-width: 100%;
+      }
+    }
+
+    @include desktop {
+      &.is-small {
+        max-width: 768px;
+      }
+
+      &.is-medium {
+        min-width: 769px;
+        max-width: 1023px;
+      }
+
+      &.is-large {
+        min-width: 1024px;
+        max-width: 1215px;
+      }
+
+      &.is-wide {
+        min-width: 1216px;
+        max-width: 1407px;
+      }
+
+      &.is-full {
+        min-width: 100%;
+      }
+    }
+  }
+}

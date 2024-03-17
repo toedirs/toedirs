@@ -2,7 +2,7 @@ use std::time::Duration;
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use crate::error_template::ErrorTemplate;
+use crate::{activity_overview::activity_details::ActivityDetails, error_template::ErrorTemplate};
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Local};
 use humantime::format_duration;
@@ -10,6 +10,8 @@ use leptos::*;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::*;
+
+pub mod activity_details;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivityListEntry {
@@ -50,6 +52,7 @@ pub async fn get_activity_list() -> Result<Vec<ActivityListEntry>, ServerFnError
 #[component]
 pub fn ActivityList() -> impl IntoView {
     let activities = create_resource(move || (), move |_| get_activity_list());
+    let show_activity = create_rw_signal(None);
     view! {
         <div class="container">
             <Transition fallback=move || view! { <p>"Loading..."</p> }>
@@ -76,7 +79,14 @@ pub fn ActivityList() -> impl IntoView {
                                                     <div class="box level">
                                                         <div class="level-left">
                                                             <div class="block">
-                                                                <p class="title is-5">{activity.sport}</p>
+                                                                <p class="title is-5">
+                                                                    <a
+                                                                        href="#!"
+                                                                        on:click=move |_| show_activity.set(Some(activity.id))
+                                                                    >
+                                                                        {activity.sport}
+                                                                    </a>
+                                                                </p>
                                                                 <p class="subtitle is-7">
                                                                     {activity.start_time.format("%Y-%m-%d").to_string()} <br/>
                                                                     {format_duration(
@@ -86,7 +96,11 @@ pub fn ActivityList() -> impl IntoView {
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <a href="#!" class="level-right">
+                                                        <a
+                                                            href="#!"
+                                                            class="level-right"
+                                                            on:click=move |_| show_activity.set(Some(activity.id))
+                                                        >
                                                             <i class="material-symbols-rounded">send</i>
                                                         </a>
                                                     </div>
@@ -98,6 +112,7 @@ pub fn ActivityList() -> impl IntoView {
                                 }
                             })
                     }}
+                    <ActivityDetails activity=show_activity/>
 
                 </ErrorBoundary>
             </Transition>

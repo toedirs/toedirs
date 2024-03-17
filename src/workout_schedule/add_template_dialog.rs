@@ -6,7 +6,6 @@ use leptos_router::*;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{postgres::*, *};
-use strum;
 use wasm_bindgen::JsCast;
 use web_sys::{DragEvent, HtmlElement};
 

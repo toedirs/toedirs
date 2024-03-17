@@ -1,5 +1,5 @@
 use crate::{
-    activity_list::ActivityList,
+    activity_overview::ActivityList,
     auth::*,
     error_template::{AppError, ErrorTemplate},
     fit_upload::FitUploadForm,
@@ -50,6 +50,8 @@ pub fn App() -> impl IntoView {
     );
     provide_meta_context();
     view! {
+        <Stylesheet id="leaflet" href="/leaflet/leaflet.css"/>
+        <Script id="leafletjs" src="/leaflet/leaflet.js"/>
         <Stylesheet id="leptos" href="/pkg/toedirs.css"/>
 
         // sets the document title

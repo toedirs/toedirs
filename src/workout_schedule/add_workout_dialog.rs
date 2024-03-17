@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{postgres::*, *};
 use std::str::FromStr;
-use strum;
 
 use super::WorkoutType;
 
