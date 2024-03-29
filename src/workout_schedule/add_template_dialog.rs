@@ -263,40 +263,10 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                             <option value="strength">Strength</option>
                                             <option value="cycling">Cycling</option>
                                             <option value="hiking">Hiking</option>
-                                            <option value="enduarnce">General Endurance</option>
+                                            <option value="endurance">General Endurance</option>
                                         </select>
                                     </div>
                                 </div>
-                            // <Select
-                            // value=select_value
-                            // name="workout_type".to_string()
-                            // options=None
-                            // attr:id="workout_type"
-                            // >
-                            // <option value="" disabled selected>
-                            // Choose workout type
-                            // </option>
-                            // <option value="run">
-                            // <i class="material-symbols-rounded">directions_run</i>
-                            // Run
-                            // </option>
-                            // <option value="strength">
-                            // <i class="material-symbols-rounded">fitness_center</i>
-                            // Strength
-                            // </option>
-                            // <option value="cycling">
-                            // <i class="material-symbols-rounded">directions_bike</i>
-                            // Cycling
-                            // </option>
-                            // <option value="hiking">
-                            // <i class="material-symbols-rounded">directions_walk</i>
-                            // Hike
-                            // </option>
-                            // <option value="endurance">
-                            // <i class="material-symbols-rounded">directions_walk</i>
-                            // General Endurance
-                            // </option>
-                            // </Select>
                             </div>
                             <div class="columns">
                                 <div class="column is-full-width">
