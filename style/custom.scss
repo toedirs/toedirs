@@ -49,7 +49,7 @@
     }
   }
 
-  .col:last-child {
+  .column:last-child {
     border-width: 1px 0 0 0;
   }
 }
@@ -178,6 +178,25 @@ main {
       &.is-full {
         min-width: 100%;
       }
+    }
+  }
+}
+
+.tooltip-wrapper {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999;
+  display: flex;
+  align-items: start;
+
+  .tooltip {
+    background: white;
+    border: 1px black solid;
+    padding: 5px;
+
+    .column {
+      overflow-wrap: normal;
     }
   }
 }

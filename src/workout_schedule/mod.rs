@@ -158,7 +158,10 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                                             let show_info = create_rw_signal(false);
                                             view! {
                                                 <div class="column is-fullwidth center-align valign-wrapper">
-                                                    <div class="box center-align valign-wrapper">
+                                                    <div
+                                                        class="box center-align valign-wrapper"
+                                                        style="position:relative;"
+                                                    >
                                                         {e.name.clone()}
                                                         <i
                                                             class="material-symbols-rounded"
@@ -178,37 +181,40 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                                                         >
 
                                                             close
-                                                        </i> <Show when=move || { show_info() } fallback=|| {}>
-                                                            <div style="position:fixed;top:5%;background:white;width:500px;">
+                                                        </i>
+                                                        <Show when=move || { show_info() } fallback=|| {}>
+                                                            <div class="tooltip-wrapper">
+                                                                <div class="tooltip">
 
-                                                                {
-                                                                    let mut steps = e.steps.clone();
-                                                                    steps.sort_by(|a, b| a.position.cmp(&b.position));
-                                                                    steps
-                                                                        .iter()
-                                                                        .map(|s| {
-                                                                            view! {
-                                                                                <div class="row">
-                                                                                    <div class="col s3">{s.name.clone()}</div>
-                                                                                    <div class="col s3">
-                                                                                        {match s.param_type.as_str() {
-                                                                                            "time_s" => {
-                                                                                                format_duration(
-                                                                                                        std::time::Duration::new(s.value.clone() as _, 0),
-                                                                                                    )
-                                                                                                    .to_string()
-                                                                                            }
-                                                                                            _ => s.value.clone().to_string(),
-                                                                                        }}
+                                                                    {
+                                                                        let mut steps = e.steps.clone();
+                                                                        steps.sort_by(|a, b| a.position.cmp(&b.position));
+                                                                        steps
+                                                                            .iter()
+                                                                            .map(|s| {
+                                                                                view! {
+                                                                                    <div class="columns">
+                                                                                        <div class="column">{s.name.clone()}</div>
+                                                                                        <div class="column">
+                                                                                            {match s.param_type.as_str() {
+                                                                                                "time_s" => {
+                                                                                                    format_duration(
+                                                                                                            std::time::Duration::new(s.value.clone() as _, 0),
+                                                                                                        )
+                                                                                                        .to_string()
+                                                                                                }
+                                                                                                _ => s.value.clone().to_string(),
+                                                                                            }}
 
+                                                                                        </div>
+                                                                                        <div class="column">{s.param_type.clone()}</div>
                                                                                     </div>
-                                                                                    <div class="col s3">{s.param_type.clone()}</div>
-                                                                                </div>
-                                                                            }
-                                                                        })
-                                                                        .collect::<Vec<_>>()
-                                                                }
+                                                                                }
+                                                                            })
+                                                                            .collect::<Vec<_>>()
+                                                                    }
 
+                                                                </div>
                                                             </div>
                                                         </Show>
                                                     </div>
