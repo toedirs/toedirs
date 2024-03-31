@@ -71,20 +71,7 @@ pub struct ScheduleOverride {
     /// Which instance in the schedule this override is for.
     pub instance: u16,
 }
-// /// A workout plan.
-// /// Contains workout schedules that make up a workout plan.
-// pub struct WorkoutPlan {
-//     /// The name of this plan.
-//     pub name: String,
-//     /// The workout schedules included in this plan.
-//     pub schedules: Vec<WorkoutSchedule>,
-//     /// Past occurences of schedules of this plan.
-//     pub past_occurences: Vec<PastOccurence>,
-//     /// Manual overrides of workout occurences.
-//     pub overrides: Vec<ScheduleOverride>,
-//     /// The scaling to be applied throughout this plan.
-//     pub scaling_schedule: Vec<ScalingEntry>,
-// }
+
 /// A scaling entry for a week of a workout plan.
 /// Defines how the volume of workouts should be increased\decreased during this week.
 pub struct ScalingEntry {
@@ -125,7 +112,9 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                 <div class=move || {
                     format!(
                         "column has-text-white {}",
-                        if week.week == today.iso_week() && today.weekday() == day {
+                        if week.week.0 == today.iso_week().year()
+                            && week.week.1 == today.iso_week().week() && today.weekday() == day
+                        {
                             "has-background-primary"
                         } else {
                             "has-background-link"
@@ -135,7 +124,7 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                     {move || {
                         format!(
                             "{}",
-                            NaiveDate::from_isoywd_opt(week.week.year(), week.week.week(), day)
+                            NaiveDate::from_isoywd_opt(week.week.0, week.week.1, day)
                                 .unwrap()
                                 .format("%d"),
                         )
@@ -314,8 +303,11 @@ pub async fn set_week_scaling(year: i32, week: i32, scaling: i32) -> Result<(), 
     Ok(())
 }
 
-#[server]
-pub async fn get_week_scaling(year: i32, week: i32) -> Result<i32, ServerFnError> {
+#[cfg(feature = "ssr")]
+pub async fn get_week_scaling(
+    from: IsoWeek,
+    to: IsoWeek,
+) -> Result<HashMap<IsoWeek, i32>, ServerFnError> {
     let pool = pool()?;
     let auth = auth()?;
     let user = auth
@@ -323,26 +315,43 @@ pub async fn get_week_scaling(year: i32, week: i32) -> Result<i32, ServerFnError
         .ok_or(ServerFnError::new("Not logged in".to_string()))?;
 
     let result = sqlx::query!(
-        r#"
-            SELECT scaling
-            FROM weekly_scaling
-            WHERE user_id=$1::bigint and year=$2::int and week=$3::int
+        r#"WITH weeks as (
+            SELECT generate_series(
+                date_trunc('week', $2::date),
+                date_trunc('week', $3::date),
+                '1 week'
+            ) as start
+        )
+        SELECT COALESCE(weekly_scaling.scaling,0) as scaling, EXTRACT(year from weeks.start)::int4 as year, EXTRACT(week from weeks.start)::int4 as week
+        FROM weeks
+        LEFT JOIN weekly_scaling on weekly_scaling.year=EXTRACT(year from weeks.start) and weekly_scaling.week=EXTRACT(week from weeks.start)
+         and user_id=$1::bigint 
         "#,
         user.id as _,
-        year,
-        week
+        NaiveDate::from_isoywd_opt(from.year(),from.week(),Weekday::Mon).unwrap(),
+        NaiveDate::from_isoywd_opt(to.year(),to.week(),Weekday::Sun).unwrap(),
     )
-    .fetch_optional(&pool)
+    .fetch_all(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Couldn't load weekly scaling: {}", e)))?;
-    if let Some(res) = result {
-        Ok(res.scaling)
-    } else {
-        Ok(0)
-    }
+    Ok(result
+        .iter()
+        .map(|r| {
+            (
+                NaiveDate::from_isoywd_opt(
+                    r.year.unwrap(),
+                    r.week.unwrap().try_into().unwrap(),
+                    Weekday::Mon,
+                )
+                .unwrap()
+                .iso_week(),
+                r.scaling.unwrap(),
+            )
+        })
+        .collect())
 }
 
-#[server]
+#[cfg(feature = "ssr")]
 pub async fn get_workout_instances(
     from: DateTime<Local>,
     to: DateTime<Local>,
@@ -383,7 +392,7 @@ pub struct WorkoutInstanceWithScaling {
     parameters: Vec<WorkoutParameter>,
     scaling: HashMap<String, f64>,
 }
-#[server]
+#[cfg(feature = "ssr")]
 pub async fn get_instance_steps_with_scaling(
     instance_id: i64,
     from: NaiveDate,
@@ -470,49 +479,58 @@ pub async fn get_instance_steps_with_scaling(
     })
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkoutStep {
     name: String,
     value: i32,
     param_type: String,
     position: i32,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workout {
     id: i64,
     name: String,
     steps: Vec<WorkoutStep>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkoutWeek {
-    week: IsoWeek,
+    week: (i32, u32),
     workouts: HashMap<Weekday, Vec<Workout>>,
     scaling: i32,
 }
-async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
-    let start = &NaiveDate::from_isoywd_opt(week.year(), week.week(), Weekday::Mon)
-        .unwrap()
-        .and_hms_opt(0, 0, 0)
-        .unwrap();
-    let end = &NaiveDate::from_isoywd_opt(week.year(), week.week(), Weekday::Sun)
-        .unwrap()
-        .checked_add_days(Days::new(1))
-        .unwrap()
-        .and_hms_opt(0, 0, 0)
-        .unwrap()
-        .checked_sub_signed(Duration::milliseconds(1))
-        .unwrap();
+#[server]
+pub async fn get_week_workouts(
+    from: NaiveDate,
+    to: NaiveDate,
+) -> Result<Vec<WorkoutWeek>, ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+
     let instances = get_workout_instances(
-        Local.from_local_datetime(start).unwrap(),
-        Local.from_local_datetime(end).unwrap(),
+        Local
+            .from_local_datetime(&from.and_hms_opt(0, 0, 0).unwrap())
+            .unwrap(),
+        Local
+            .from_local_datetime(&to.and_hms_opt(0, 0, 0).unwrap())
+            .unwrap(),
     )
     .await
     .unwrap();
-    let scaling = get_week_scaling(week.year(), week.week().try_into().unwrap())
+    let scalings = get_week_scaling(from.iso_week(), to.iso_week())
         .await
         .unwrap();
-    let mut workouts = HashMap::new();
+    let mut weeks: HashMap<IsoWeek, HashMap<Weekday, Vec<Workout>>> = HashMap::new();
+    println!("s: {:?}", scalings);
+    // ensure each week has an entry
+    for scaling in scalings.keys() {
+        weeks.entry(*scaling).or_default();
+    }
+    println!("w1: {:?}", weeks);
+
     for instance in instances {
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
             instance
@@ -529,13 +547,21 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
                 .next()
                 .map(|d| d.date_naive())
                 .unwrap_or(instance.start_date.date_naive()),
-            end.date(),
+            to,
         )
         .await
         .unwrap();
         let occurences = rrule
-            .after(Tz::LOCAL.from_local_datetime(start).unwrap())
-            .before(Tz::LOCAL.from_local_datetime(end).unwrap())
+            .after(
+                Tz::LOCAL
+                    .from_local_datetime(&from.and_hms_opt(0, 0, 0).unwrap())
+                    .unwrap(),
+            )
+            .before(
+                Tz::LOCAL
+                    .from_local_datetime(&to.and_hms_opt(0, 0, 0).unwrap())
+                    .unwrap(),
+            )
             .all_unchecked();
         for occurence in occurences {
             let steps: Vec<WorkoutStep> = steps_and_scaling
@@ -566,17 +592,26 @@ async fn get_week_workouts(week: IsoWeek) -> WorkoutWeek {
                 name: instance.template.template_name.clone(),
                 steps,
             };
-            workouts
+
+            weeks
+                .entry(occurence.iso_week())
+                .or_default()
                 .entry(occurence.weekday())
-                .and_modify(|o: &mut Vec<_>| o.push(workout.clone()))
-                .or_insert(vec![workout]);
+                .or_default()
+                .push(workout);
         }
     }
-    WorkoutWeek {
-        week,
-        workouts,
-        scaling,
-    }
+    println!("w2: {:?}", weeks);
+    let mut result: Vec<WorkoutWeek> = weeks
+        .iter()
+        .map(|(week, m)| WorkoutWeek {
+            week: (week.year(), week.week()),
+            workouts: m.clone(),
+            scaling: *scalings.get(&week).unwrap_or(&0),
+        })
+        .collect();
+    result.sort_by(|a, b| a.week.partial_cmp(&b.week).unwrap());
+    Ok(result)
 }
 
 #[component]
@@ -589,15 +624,17 @@ pub fn WorkoutCalendar() -> impl IntoView {
         move |_| async move {
             let newest = weeks
                 .with_untracked(|wk| wk.last().map(|l| l.week))
-                .unwrap_or(today.iso_week());
-            let newest =
-                NaiveDate::from_isoywd_opt(newest.year(), newest.week(), Weekday::Mon).unwrap();
-            let mut week_entries: Vec<_> = Vec::new();
-            for w in 1..9 {
-                week_entries
-                    .push(get_week_workouts((newest + Duration::weeks(w)).iso_week()).await);
+                .unwrap_or((today.iso_week().year(), today.iso_week().week()));
+            let newest = NaiveDate::from_isoywd_opt(newest.0, newest.1, Weekday::Mon).unwrap();
+
+            let week_entries = get_week_workouts(
+                newest + Duration::try_weeks(1).unwrap(),
+                newest + Duration::try_weeks(9).unwrap(),
+            )
+            .await;
+            if let Ok(week_entries) = week_entries {
+                weeks.update(|v| v.extend(week_entries));
             }
-            weeks.update(|v| v.extend(week_entries));
         },
         UseInfiniteScrollOptions::default().direction(leptos_use::core::Direction::Bottom),
     );
@@ -606,17 +643,25 @@ pub fn WorkoutCalendar() -> impl IntoView {
         move |_| async move {
             let newest = weeks
                 .with_untracked(|wk| wk.iter().next().map(|n| n.week))
-                .unwrap_or(today.iso_week());
-            let newest =
-                NaiveDate::from_isoywd_opt(newest.year(), newest.week(), Weekday::Mon).unwrap();
-            let new_week = get_week_workouts((newest - Duration::weeks(1)).iso_week()).await;
-            weeks.update(|v| {
-                *v = iter::once(new_week)
-                    .chain((*v).iter().map(|x| x.clone()))
-                    .collect();
-            });
-            if let Some(el) = calendar_list_el.get_untracked() {
-                el.set_scroll_top(150);
+                .unwrap_or((today.iso_week().year(), today.iso_week().week()));
+            let newest = NaiveDate::from_isoywd_opt(newest.0, newest.1, Weekday::Mon).unwrap();
+            let week_entries = get_week_workouts(
+                newest - Duration::try_weeks(1).unwrap(),
+                newest - Duration::try_days(1).unwrap(),
+            )
+            .await;
+            if let Some(new_week) = week_entries
+                .ok()
+                .and_then(|w| w.first().and_then(|f| Some(f.to_owned())))
+            {
+                weeks.update(|v| {
+                    *v = iter::once(new_week)
+                        .chain((*v).iter().map(|x| x.clone()))
+                        .collect();
+                });
+                if let Some(el) = calendar_list_el.get_untracked() {
+                    el.set_scroll_top(150);
+                }
             }
         },
         UseInfiniteScrollOptions::default()
@@ -668,7 +713,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
                     <For each=move || weeks.get() key=|i| format!("{:?}", i.week) let:item>
                         <div class="calendar-row cal-content">
                             <div class="column center-align valign-wrapper">
-                                {item.week.year()} - {item.week.week()}
+                                {item.week.0} - {item.week.1}
                             </div>
                             <WorkoutDay week=item.clone() today=today day=Weekday::Mon/>
                             <WorkoutDay week=item.clone() today=today day=Weekday::Tue/>
@@ -680,21 +725,17 @@ pub fn WorkoutCalendar() -> impl IntoView {
                             <div class="column field">
                                 <div class="control select">
                                     <select
-                                        name=format!(
-                                            "load-{}-{}",
-                                            item.week.year(),
-                                            item.week.week(),
-                                        )
+                                        name=format!("load-{}-{}", item.week.0, item.week.1)
 
-                                        id=format!("load-{}-{}", item.week.year(), item.week.week())
+                                        id=format!("load-{}-{}", item.week.0, item.week.1)
                                         style="display:block;"
                                         on:input=move |ev| {
                                             let val = event_target_value(&ev).parse::<i32>();
                                             if let Ok(val) = val {
                                                 set_scaling
                                                     .dispatch(SetWeekScaling {
-                                                        year: item.week.year(),
-                                                        week: item.week.week().try_into().unwrap(),
+                                                        year: item.week.0,
+                                                        week: item.week.1.try_into().unwrap(),
                                                         scaling: val,
                                                     });
                                             }

@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH weeks as (\n            SELECT generate_series(\n                date_trunc('week', $2::date),\n                date_trunc('week', $3::date),\n                '1 week'\n            ) as start\n        )\n        SELECT COALESCE(weekly_scaling.scaling,0) as scaling, EXTRACT(year from weeks.start)::int4 as year, EXTRACT(week from weeks.start)::int4 as week\n        FROM weeks\n        LEFT JOIN weekly_scaling on weekly_scaling.year=EXTRACT(year from weeks.start) and weekly_scaling.week=EXTRACT(week from weeks.start)\n         and user_id=$1::bigint \n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "scaling",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "week",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "5d1e77b0898cfa2a76010334607c56a0d1445c28619976014800cd70e0458f22"
+}
