@@ -200,3 +200,9 @@ main {
     }
   }
 }
+
+input[type="range"] {
+  -moz-appearance: auto;
+  -webkit-appearance: auto;
+  border: none;
+}

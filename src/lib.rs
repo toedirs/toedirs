@@ -11,6 +11,7 @@ pub mod heartrate_summary_chart;
 pub mod models;
 pub mod state;
 pub mod training_load_chart;
+pub mod user;
 pub mod workout_schedule;
 
 cfg_if! { if #[cfg(feature = "hydrate")] {

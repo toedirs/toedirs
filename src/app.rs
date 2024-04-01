@@ -5,6 +5,7 @@ use crate::{
     fit_upload::FitUploadForm,
     heartrate_summary_chart::HeartrateSummaryChart,
     training_load_chart::TrainingLoadChart,
+    user::UserSettings,
     workout_schedule::WorkoutCalendar,
 };
 use chrono::{Duration, Local, NaiveDate, TimeZone};
@@ -32,6 +33,7 @@ if #[cfg(feature = "ssr")] {
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     let (show_upload, set_show_upload) = create_signal(false);
+    let show_settings = create_rw_signal(false);
     let login = create_server_action::<Login>();
     let logout = create_server_action::<Logout>();
     let signup = create_server_action::<Signup>();
@@ -118,6 +120,13 @@ pub fn App() -> impl IntoView {
                                                         <A href="/calendar" class="navbar-item">
                                                             Calendar
                                                         </A>
+                                                        <a
+                                                            href="#"
+                                                            class="navbar-item"
+                                                            on:click=move |_| { show_settings.update(|v| *v = !*v) }
+                                                        >
+                                                            Settings
+                                                        </a>
                                                     </div>
                                                     <div class="navbar-end">
                                                         <div class="navbar-item">
@@ -142,6 +151,7 @@ pub fn App() -> impl IntoView {
                                             <main>
                                                 <Outlet/>
                                                 <FitUploadForm show=show_upload show_set=set_show_upload/>
+                                                <UserSettings show=show_settings/>
                                             </main>
                                         }
                                             .into_view()

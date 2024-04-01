@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    UPDATE user_preferences\n                    SET end_time=$2\n                    WHERE id=$1\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "712371cc778e2f88d773d72abba18dd01768c44167aa8badfbf9d2f0233429e8"
+}
