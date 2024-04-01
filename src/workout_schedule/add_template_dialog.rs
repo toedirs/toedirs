@@ -1,15 +1,17 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
+#[cfg(feature = "ssr")]
 use itertools::Itertools;
-use leptos::{ev::SubmitEvent, html::Label, logging::log, *};
+use leptos::*;
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
-use sqlx::{postgres::*, *};
+use sqlx::*;
 use wasm_bindgen::JsCast;
 use web_sys::{DragEvent, HtmlElement};
 
-use crate::{elements::select::Select, workout_schedule::WorkoutType};
+#[cfg(feature = "ssr")]
+use crate::workout_schedule::WorkoutType;
 
 #[derive(Clone, Debug)]
 pub struct Parameter {
@@ -180,14 +182,10 @@ pub async fn create_workout(
 
 #[component]
 pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
-    let select_value = create_rw_signal("".to_string());
     let create_workout_action = create_server_action::<CreateWorkout>();
     let workout_parameter_index = create_rw_signal(0);
     let workout_parameters = create_rw_signal(vec![Parameter::default()]);
-    let on_submit = move |ev: SubmitEvent| {
-        log!("{:?}", ev);
-        let data = CreateWorkout::from_event(&ev);
-        log!("{:?}", data);
+    let on_submit = move |_| {
         show.set(false);
     };
     let owner = Owner::current().unwrap();
@@ -216,7 +214,6 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
         },
         false,
     );
-    let name_ref = create_node_ref::<Label>();
     let close = move |_| show.set(false);
     view! {
         <Show when=move || { show() } fallback=|| {}>

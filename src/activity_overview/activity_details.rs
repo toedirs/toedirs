@@ -10,7 +10,7 @@ use leptos_charts::{Color, Gradient, LineChart, LineChartOptions};
 use leptos_leaflet::*;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
-use sqlx::{postgres::*, *};
+use sqlx::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::Type))]

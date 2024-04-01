@@ -1,7 +1,9 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 use crate::error_template::ErrorTemplate;
-use chrono::{DateTime, Duration, Local};
+#[cfg(feature = "ssr")]
+use chrono::Duration;
+use chrono::{DateTime, Local};
 use leptos::*;
 use leptos_charts::{Color, Gradient, PieChart, PieChartOptions, Series};
 use serde::{Deserialize, Serialize};
@@ -57,7 +59,7 @@ pub async fn heartrate_zone_summary_action(
     let pool = pool()?;
     let summary = heartrate_zone_summary(
         user.id,
-        from.unwrap_or(Local::now() - Duration::days(120)),
+        from.unwrap_or(Local::now() - Duration::try_days(120).unwrap()),
         to.unwrap_or(Local::now()),
         pool,
     )

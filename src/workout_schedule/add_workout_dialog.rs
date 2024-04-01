@@ -1,19 +1,20 @@
 use std::{
     collections::{HashMap, HashSet},
-    error::Error,
     iter,
 };
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Weekday};
+#[cfg(feature = "ssr")]
 use itertools::Itertools;
-use leptos::{ev::SubmitEvent, logging::log, *};
+use leptos::{ev::SubmitEvent, *};
 use leptos_router::*;
 use rrule::{NWeekday, RRule, Tz};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{postgres::*, *};
+#[cfg(feature = "ssr")]
 use std::str::FromStr;
 
 use super::WorkoutType;
@@ -627,7 +628,6 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 type="checkbox"
                                                 value="sunday"
                                                 on:change=move |ev| {
-                                                    log!("{}", event_target_checked(& ev));
                                                     repetition_on_day
                                                         .update(|r| {
                                                             let val = event_target_value(&ev);

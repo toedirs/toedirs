@@ -1,7 +1,7 @@
 use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(feature = "ssr")] {
-        use axum::{routing::{get,post}, Router, response::{Response,IntoResponse}, extract::{Path, State, RawQuery}, http::{Request, header::HeaderMap}, body::Body as AxumBody};
+        use axum::{routing::{get,post}, Router, response::{Response,IntoResponse}, extract::{Path, State }, http::{Request }, body::Body as AxumBody};
         use leptos::logging::log;
         use leptos::*;
         use leptos_axum::{generate_route_list, LeptosRoutes, handle_server_fns_with_context};
@@ -22,11 +22,9 @@ cfg_if! {
 async fn server_fn_handler(
     State(app_state): State<AppState>,
     auth_session: AuthSession,
-    path: Path<String>,
+    _path: Path<String>,
     request: Request<AxumBody>,
 ) -> impl IntoResponse {
-    log!("{:?}", path);
-
     handle_server_fns_with_context(
         move || {
             provide_context(auth_session.clone());

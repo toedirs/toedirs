@@ -1,6 +1,8 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use chrono::{DateTime, Duration, Local};
+#[cfg(feature = "ssr")]
+use chrono::Duration;
+use chrono::{DateTime, Local};
 use leptos::*;
 use leptos_charts::{BarChart, BarChartOptions};
 use serde::{Deserialize, Serialize};
@@ -61,7 +63,7 @@ pub async fn training_load_action(
     let pool = pool()?;
     let summary = training_load(
         user.id,
-        from.unwrap_or(Local::now() - Duration::days(120)),
+        from.unwrap_or(Local::now() - Duration::try_days(120).unwrap()),
         to.unwrap_or(Local::now()),
         pool,
     )

@@ -1,26 +1,24 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter,
-};
+use std::{collections::HashMap, iter};
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 use crate::workout_schedule::{
     add_template_dialog::CreateWorkoutDialog, add_workout_dialog::AddWorkoutDialog,
 };
-use chrono::{DateTime, Datelike, Days, Duration, IsoWeek, Local, NaiveDate, TimeZone, Weekday};
+use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, Weekday};
+#[cfg(feature = "ssr")]
+use chrono::{IsoWeek, TimeZone};
 use humantime::format_duration;
-use leptos::{html::Div, logging::log, *};
-use leptos_router::*;
-use leptos_use::{use_element_hover, use_infinite_scroll_with_options, UseInfiniteScrollOptions};
-use rrule::{RRule, RRuleSet, Tz, Unvalidated, Validated};
+use leptos::{html::Div, *};
+use leptos_use::{use_infinite_scroll_with_options, UseInfiniteScrollOptions};
+use rrule::{RRule, Validated};
+#[cfg(feature = "ssr")]
+use rrule::{RRuleSet, Tz, Unvalidated};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{postgres::*, *};
+#[cfg(feature = "ssr")]
 use std::str::FromStr;
-use strum;
-
-use crate::elements::select::Select;
 
 use self::add_workout_dialog::WorkoutParameter;
 
@@ -353,7 +351,7 @@ pub async fn get_week_scaling(
 
 #[cfg(feature = "ssr")]
 pub async fn get_workout_instances(
-    from: DateTime<Local>,
+    _from: DateTime<Local>,
     to: DateTime<Local>,
 ) -> Result<Vec<WorkoutInstance>, ServerFnError> {
     let pool = pool()?;
@@ -432,7 +430,6 @@ pub async fn get_instance_steps_with_scaling(
         from.iso_week().week() as i32,
         user.id as _,
     ).fetch_all(&pool).await.map_err(|e|ServerFnError::new(format!("Couldn't load scaling: {}",e)))?;
-    log!("scaling:{:?}", result);
     let scaling: HashMap<String, f64> = result
         .iter()
         .map(|r| {
@@ -504,9 +501,8 @@ pub async fn get_week_workouts(
     from: NaiveDate,
     to: NaiveDate,
 ) -> Result<Vec<WorkoutWeek>, ServerFnError> {
-    let pool = pool()?;
     let auth = auth()?;
-    let user = auth
+    let _user = auth
         .current_user
         .ok_or(ServerFnError::new("Not logged in".to_string()))?;
 
@@ -524,12 +520,10 @@ pub async fn get_week_workouts(
         .await
         .unwrap();
     let mut weeks: HashMap<IsoWeek, HashMap<Weekday, Vec<Workout>>> = HashMap::new();
-    println!("s: {:?}", scalings);
     // ensure each week has an entry
     for scaling in scalings.keys() {
         weeks.entry(*scaling).or_default();
     }
-    println!("w1: {:?}", weeks);
 
     for instance in instances {
         let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
@@ -601,7 +595,6 @@ pub async fn get_week_workouts(
                 .push(workout);
         }
     }
-    println!("w2: {:?}", weeks);
     let mut result: Vec<WorkoutWeek> = weeks
         .iter()
         .map(|(week, m)| WorkoutWeek {

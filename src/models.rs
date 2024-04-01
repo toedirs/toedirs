@@ -538,7 +538,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Activity> {
             state: Box::new(Activity {
                 user_id: None,
                 start_time:timestamp,
-                end_time:timestamp + Duration::seconds(duration as i64),
+                end_time:timestamp + Duration::try_seconds(duration as i64).unwrap(),
                 duration,
             }),
             extra: New,

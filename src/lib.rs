@@ -3,7 +3,6 @@ pub mod activity_overview;
 pub mod app;
 pub mod auth;
 pub mod config;
-pub mod elements;
 pub mod error_template;
 #[cfg(feature = "ssr")]
 pub mod fileserv;

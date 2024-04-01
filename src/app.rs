@@ -7,8 +7,8 @@ use crate::{
     training_load_chart::TrainingLoadChart,
     workout_schedule::WorkoutCalendar,
 };
-use chrono::{Duration, Local, NaiveDate, NaiveDateTime, TimeZone};
-use leptos::{html::Label, *};
+use chrono::{Duration, Local, NaiveDate, TimeZone};
+use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
@@ -170,7 +170,7 @@ pub fn App() -> impl IntoView {
 fn Overview() -> impl IntoView {
     //overview page
     let from_date = create_rw_signal(Some(
-        (Local::now() - Duration::days(120))
+        (Local::now() - Duration::try_days(120).unwrap())
             .date_naive()
             .format("%Y-%m-%d")
             .to_string(),
