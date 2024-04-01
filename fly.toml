@@ -7,11 +7,12 @@ app = "toedirs"
 primary_region = "cdg"
 
 [build]
+dockerfile = "Dockerfile.musl"
 [build.args]
   PROFILE="release"
 
 [http_service]
-  internal_port = 8080
+  internal_port = 8479
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true

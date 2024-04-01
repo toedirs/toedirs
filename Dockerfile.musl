@@ -1,0 +1,51 @@
+FROM clux/muslrust:nightly as builder
+ARG BINARY_NAME_DEFAULT=toedirs
+RUN groupadd -g 10001 -r dockergrp && useradd -r -g dockergrp -u 10001 dockeruser
+ENV BINARY_NAME=$BINARY_NAME_DEFAULT
+ENV LEPTOS_BIN_TARGET_TRIPLE=x86_64-unknown-linux-musl
+
+# Install cargo-leptos
+RUN cargo install cargo-leptos 
+
+# Add the WASM target
+RUN rustup target add wasm32-unknown-unknown
+
+COPY Cargo.lock .
+COPY Cargo.toml .
+RUN mkdir src \
+    && echo "fn main() {print!(\"Dummy main\");} // dummy file" > src/main.rs \
+	&& touch src/lib.rs
+RUN set -x && cargo build --target x86_64-unknown-linux-musl --release
+RUN ["/bin/bash", "-c", "set -x && rm target/x86_64-unknown-linux-musl/release/deps/${BINARY_NAME//-/_}*"]
+
+COPY public ./public
+COPY migrations ./migrations
+COPY .sqlx ./.sqlx
+COPY style ./style
+COPY src ./src
+RUN set -x && cargo leptos build --release 
+RUN mkdir -p /build-out
+RUN set -x && cp target/x86_64-unknown-linux-musl/release/$BINARY_NAME /build-out/ \
+    && cp -r target/site/ /build-out/site
+
+FROM scratch
+
+COPY --from=0 /etc/passwd /etc/passwd
+USER dockeruser
+
+ARG BINARY_NAME_DEFAULT=toedirs
+ENV BINARY_NAME=$BINARY_NAME_DEFAULT
+
+ENV RUST_LOG="error,$BINARY_NAME=info"
+COPY --from=builder /build-out/$BINARY_NAME /
+COPY --from=builder /build-out/site /site
+
+# Start with an execution list (there is no sh in a scratch image)
+# No shell => no variable expansion, |, <, >, etc 
+# Hard coded start command
+ENV RUST_LOG="info"
+ENV LEPTOS_SITE_ADDR="0.0.0.0:8479"
+ENV LEPTOS_SITE_ROOT="/site"
+ENV DATABASE_URL=
+EXPOSE 8479
+CMD ["/toedirs"]

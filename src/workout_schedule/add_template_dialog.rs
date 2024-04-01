@@ -90,16 +90,6 @@ pub fn WorkoutParameter(param: Parameter) -> impl IntoView {
                                         <option value="trainingload">TrainingLoad</option>
                                     </select>
                                 </div>
-                            // <Select
-                            // value=param.param_type
-                            // name=select_name
-                            // options=None
-                            // attr:id="parameter_type"
-                            // >
-                            // <option value="time_s">Time</option>
-                            // <option value="distance_m">Distance(m)</option>
-                            // <option value="trainingload">TrainingLoad</option>
-                            // </Select>
                             </p>
                             <p class="control">
                                 <input
