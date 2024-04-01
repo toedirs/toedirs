@@ -624,7 +624,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
         move |_| async move {
             let newest = weeks
                 .with_untracked(|wk| wk.last().map(|l| l.week))
-                .unwrap_or((today.iso_week().year(), today.iso_week().week()));
+                .unwrap_or((today.iso_week().year(), today.iso_week().week() - 1));
             let newest = NaiveDate::from_isoywd_opt(newest.0, newest.1, Weekday::Mon).unwrap();
 
             let week_entries = get_week_workouts(
@@ -643,7 +643,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
         move |_| async move {
             let newest = weeks
                 .with_untracked(|wk| wk.iter().next().map(|n| n.week))
-                .unwrap_or((today.iso_week().year(), today.iso_week().week()));
+                .unwrap_or((today.iso_week().year(), today.iso_week().week() - 1));
             let newest = NaiveDate::from_isoywd_opt(newest.0, newest.1, Weekday::Mon).unwrap();
             let week_entries = get_week_workouts(
                 newest - Duration::try_weeks(1).unwrap(),
