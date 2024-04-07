@@ -48,11 +48,33 @@ pub async fn get_activity_list() -> Result<Vec<ActivityListEntry>, ServerFnError
     .await?;
     Ok(activities)
 }
+#[server]
+pub async fn delete_activity(activity_id: i64) -> Result<(), ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+    sqlx::query!(
+        r#"
+        DELETE FROM activities
+        WHERE user_id=$1 and id=$2
+        "#,
+        user.id as _,
+        activity_id
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Couldn't delete activity:{}", e)))?;
+
+    Ok(())
+}
 
 #[component]
 pub fn ActivityList() -> impl IntoView {
     let activities = create_resource(move || (), move |_| get_activity_list());
     let show_activity = create_rw_signal(None);
+    let delete_activity = create_server_action::<DeleteActivity>();
     view! {
         <div class="container">
             <Transition fallback=move || view! { <p>"Loading..."</p> }>
@@ -99,9 +121,15 @@ pub fn ActivityList() -> impl IntoView {
                                                         <a
                                                             href="#!"
                                                             class="level-right"
-                                                            on:click=move |_| show_activity.set(Some(activity.id))
+                                                            on:click=move |_| {
+                                                                delete_activity
+                                                                    .dispatch(DeleteActivity {
+                                                                        activity_id: activity.id,
+                                                                    });
+                                                            }
                                                         >
-                                                            <i class="material-symbols-rounded">send</i>
+
+                                                            <i class="material-symbols-rounded">delete</i>
                                                         </a>
                                                     </div>
                                                 </div>

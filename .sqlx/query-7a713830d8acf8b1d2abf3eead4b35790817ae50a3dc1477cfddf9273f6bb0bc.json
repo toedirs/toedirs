@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM activities\n        WHERE user_id=$1 and id=$2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7a713830d8acf8b1d2abf3eead4b35790817ae50a3dc1477cfddf9273f6bb0bc"
+}
