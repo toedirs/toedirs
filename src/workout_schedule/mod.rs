@@ -96,7 +96,7 @@ pub async fn delete_workout_instance(instance_id: i64) -> Result<(), ServerFnErr
     )
     .execute(&pool)
     .await
-    .map_err(|e| ServerFnError::new(format!("Couldn't load weekly scaling: {}", e)))?;
+    .map_err(|e| ServerFnError::new(format!("Couldn't delete instance: {}", e)))?;
 
     Ok(())
 }
