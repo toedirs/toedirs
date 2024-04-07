@@ -15,7 +15,6 @@ pub struct HeartrateSummary {
     pub zone1: Option<i64>,
     pub zone2: Option<i64>,
     pub zone3: Option<i64>,
-    pub zone4: Option<i64>,
 }
 #[cfg(feature = "ssr")]
 pub async fn heartrate_zone_summary(
@@ -25,22 +24,21 @@ pub async fn heartrate_zone_summary(
     executor: sqlx::PgPool,
 ) -> Result<HeartrateSummary, sqlx::Error> {
     let result = sqlx::query_as!(HeartrateSummary, r#"SELECT
-    COUNT(*) FILTER (WHERE m.zone = 4) AS zone4,
     COUNT(*) FILTER (WHERE m.zone = 3) AS zone3,
     COUNT(*) FILTER (WHERE m.zone = 2) AS zone2,
     COUNT(*) FILTER (WHERE m.zone = 1) AS zone1
 FROM (
     SELECT record.heartrate,
         CASE
-            WHEN record.heartrate >= 126 AND record.heartrate < 142 THEN 1
-            WHEN record.heartrate >= 142 AND record.heartrate < 158 THEN 2
-            WHEN record.heartrate >= 158 AND record.heartrate < 171 THEN 3
-            WHEN record.heartrate >= 171 THEN 4
+            WHEN record.heartrate >= COALESCE(up.max_heartrate * 0.55, 100) AND record.heartrate < COALESCE(up.aerobic_threshold,155) THEN 1
+            WHEN record.heartrate >= COALESCE(up.aerobic_threshold, 155) AND record.heartrate < COALESCE(up.anaerobic_threshold,172) THEN 2
+            WHEN record.heartrate >= COALESCE(up.anaerobic_threshold, 172) THEN 3
         END as zone
     FROM activities as activities
     LEFT JOIN records as record ON record.activity_id = activities.id
+    LEFT JOIN user_preferences up ON up.user_id=activities.user_id
     WHERE activities.user_id = $1::bigint AND activities.start_time >= $2::timestamptz AND activities.end_time <= $3::timestamptz
-        AND record.heartrate IS NOT NULL AND record.heartrate >= 126
+        AND record.heartrate IS NOT NULL AND record.heartrate >= COALESCE(up.max_heartrate * 0.55, 100)
 ) m
 "#, &user_id, &from,&to).fetch_one(&executor).await?;
     Ok(result)
@@ -95,7 +93,6 @@ pub fn HeartrateSummaryChart(
                                     (zone_summary.zone1.unwrap_or(0), "Zone 1".to_string()),
                                     (zone_summary.zone2.unwrap_or(0), "Zone 2".to_string()),
                                     (zone_summary.zone3.unwrap_or(0), "Zone 3".to_string()),
-                                    (zone_summary.zone4.unwrap_or(0), "Zone 4".to_string()),
                                 ]
                                     .into();
                                 let options: Box<PieChartOptions> = Box::new(PieChartOptions {

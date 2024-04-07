@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            user_id,\n            start_time as \"start_time:DateTime<Local>\",\n            end_time as \"end_time:DateTime<Local>\",\n            aerobic_threshold,\n            anaerobic_threshold,\n            max_heartrate,\n            tau,\n            c\n        FROM user_preferences\n        WHERE user_id=$1 \n            and (start_time IS NULL and end_time IS NULL) \n            OR (start_time IS NULL and $2 < end_time) \n            OR (start_time <= $2 and end_time IS NULL) \n            OR (start_time <= $2 and $2 < end_time)\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "start_time:DateTime<Local>",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "end_time:DateTime<Local>",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "aerobic_threshold",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "anaerobic_threshold",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "max_heartrate",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "tau",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "c",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "91409a49c001fc04b3a5258b618a0ad5d610eb5a955ea0bd0e1b3ba4c17ed639"
+}

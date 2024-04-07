@@ -49,6 +49,8 @@ pub async fn upload_fit_file(
 
 #[cfg(feature = "ssr")]
 async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Result<()> {
+    use crate::models::get_user_preferences;
+
     let mut records: Vec<DatabaseEntry<New, Record>> = Vec::new();
     let mut sessions: Vec<DatabaseEntry<New, Session>> = Vec::new();
     let mut laps: Vec<DatabaseEntry<New, Lap>> = Vec::new();
@@ -90,7 +92,20 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
             }
         }
     }
-    if let Some(activity) = activity {
+    if let Some(mut activity) = activity {
+        let hr_measurements: Vec<_> = records
+            .iter()
+            .filter_map(|r| r.state.heartrate.and_then(|hr| Some(hr as u32)))
+            .collect();
+        if hr_measurements.len() > 0 {
+            activity.state.avg_heartrate =
+                Some((hr_measurements.iter().sum::<u32>() / hr_measurements.len() as u32) as u16);
+            // calculate training load
+            let preferences =
+                get_user_preferences(user_id, activity.state.start_time, &executor).await;
+            activity.state.load = Some(preferences.calculate_load(hr_measurements));
+        }
+
         let mut tx = executor.begin().await?;
         let result = insert_activity(activity, user_id, &mut *tx).await;
         if let Err(x) = result {

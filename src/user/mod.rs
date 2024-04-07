@@ -7,6 +7,47 @@ use leptos_router::*;
 #[cfg(feature = "ssr")]
 use sqlx::*;
 
+#[cfg(feature = "ssr")]
+use nalgebra::DVector;
+#[cfg(feature = "ssr")]
+use varpro::{
+    prelude::*,
+    solvers::levmar::{LevMarProblemBuilder, LevMarSolver},
+};
+
+#[cfg(feature = "ssr")]
+fn exp_model(x: &DVector<f64>, tau: f64) -> DVector<f64> {
+    x.map(|x| (tau * x).exp() + 1.0)
+}
+#[cfg(feature = "ssr")]
+fn exp_model_dtau(tvec: &DVector<f64>, tau: f64) -> DVector<f64> {
+    tvec.map(|t| t * (tau * t).exp())
+}
+
+#[cfg(feature = "ssr")]
+fn curve_fit(aerobic: f64, anaerobic: f64, max_heartrate: f64) -> (f64, f64) {
+    let x = DVector::from_vec(vec![aerobic, anaerobic, (anaerobic + max_heartrate) / 2.0]);
+    let y = DVector::from_vec(vec![0.71, 2.61, 4.16]);
+    let model = SeparableModelBuilder::<f64>::new(&["tau"])
+        .function(&["tau"], exp_model)
+        .partial_deriv("tau", exp_model_dtau)
+        // .invariant_function(|x| DVector::from_element(x.len(), 1.0))
+        .independent_variable(x)
+        .initial_parameters(vec![0.01])
+        .build()
+        .unwrap();
+    let problem = LevMarProblemBuilder::new(model)
+        .observations(y)
+        .build()
+        .unwrap();
+    let fit_result = LevMarSolver::default()
+        .fit(problem)
+        .expect("fit must succeed");
+    let alpha = fit_result.nonlinear_parameters();
+    let c = fit_result.linear_coefficients().unwrap();
+    (alpha[0], c[0])
+}
+
 #[server]
 pub async fn update_user_preferences(
     aerobic_threshold: u32,
@@ -18,6 +59,11 @@ pub async fn update_user_preferences(
     let user = auth
         .current_user
         .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+    let (tau, c) = curve_fit(
+        aerobic_threshold as f64,
+        anaerobic_threshold as f64,
+        max_heartrate as f64,
+    );
     let current = sqlx::query!(
         r#"
         SELECT id
@@ -37,15 +83,17 @@ pub async fn update_user_preferences(
                 .map_err(|e| ServerFnError::new(format!("Couldn't start transaction:{}", e)))?;
             sqlx::query!(
                 r#"
-                INSERT INTO user_preferences (user_id,start_time,end_time,aerobic_threshold, anaerobic_threshold,max_heartrate)
-                VALUES ($1,$2,$3,$4,$5,$6)
+                INSERT INTO user_preferences (user_id,start_time,end_time,aerobic_threshold, anaerobic_threshold,max_heartrate, tau, c)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
                 "#,
                 user.id as _,
                 Utc::now(),
                 Option::<DateTime<Utc>>::None,
                 aerobic_threshold as i32,
                 anaerobic_threshold as i32,
-                max_heartrate as i32
+                max_heartrate as i32,
+                tau,
+                c
             ).execute(&mut *transaction).await.map_err(|e|ServerFnError::new(format!("Couldn't update preferences:{}",e)))?;
 
             sqlx::query!(
@@ -68,15 +116,17 @@ pub async fn update_user_preferences(
         None => {
             sqlx::query!(
                 r#"
-                INSERT INTO user_preferences (user_id,start_time,end_time,aerobic_threshold, anaerobic_threshold,max_heartrate)
-                VALUES ($1,$2,$3,$4,$5,$6)
+                INSERT INTO user_preferences (user_id,start_time,end_time,aerobic_threshold, anaerobic_threshold,max_heartrate, tau, c)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
                 "#,
                 user.id as _,
                 Option::<DateTime<Utc>>::None,
                 Option::<DateTime<Utc>>::None,
                 aerobic_threshold as i32,
                 anaerobic_threshold as i32,
-                max_heartrate as i32
+                max_heartrate as i32,
+                tau,
+                c
             ).execute(&pool).await.map_err(|e|ServerFnError::new(format!("Couldn't update preferences:{}",e)))?;
         }
     }
@@ -229,5 +279,20 @@ pub fn UserSettings(show: RwSignal<bool>) -> impl IntoView {
                 on:click=move |_| { show.set(false) }
             ></div>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[cfg(feature = "ssr")]
+    use super::curve_fit;
+
+    #[cfg(feature = "ssr")]
+    #[test]
+    fn test_hr_fit() {
+        let fit = curve_fit(155.0, 172.0, 183.0);
+        println!("{:?}", fit);
+        assert!((fit.0 - 0.0809749).abs() < 0.00001);
+        assert!((fit.1 - 0.000002370473).abs() < 0.00000000001);
     }
 }
