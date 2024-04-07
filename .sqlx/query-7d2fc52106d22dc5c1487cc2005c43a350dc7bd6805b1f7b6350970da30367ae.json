@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO workout_exclusion_dates(workout_instance_id, exclusion_date)\n        VALUES($1,$2)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7d2fc52106d22dc5c1487cc2005c43a350dc7bd6805b1f7b6350970da30367ae"
+}

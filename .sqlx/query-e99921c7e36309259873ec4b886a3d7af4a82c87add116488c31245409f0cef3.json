@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                i.id\n            FROM workout_instances i\n            WHERE i.user_id=$1::bigint and i.id=$2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e99921c7e36309259873ec4b886a3d7af4a82c87add116488c31245409f0cef3"
+}

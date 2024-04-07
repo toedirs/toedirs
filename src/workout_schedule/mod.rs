@@ -101,9 +101,53 @@ pub async fn delete_workout_instance(instance_id: i64) -> Result<(), ServerFnErr
     Ok(())
 }
 
+#[server]
+pub async fn delete_workout_occurence(
+    instance_id: i64,
+    week: (i32, u32),
+    day: Weekday,
+) -> Result<(), ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+    let _ = sqlx::query!(
+        r#"
+            SELECT 
+                i.id
+            FROM workout_instances i
+            WHERE i.user_id=$1::bigint and i.id=$2
+        "#,
+        user.id as i32,
+        instance_id
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    let date = NaiveDate::from_isoywd_opt(week.0, week.1, day).unwrap();
+    let date = Local
+        .from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap())
+        .unwrap();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO workout_exclusion_dates(workout_instance_id, exclusion_date)
+        VALUES($1,$2)
+        "#,
+        instance_id as _,
+        date
+    )
+    .execute(&pool)
+    .await?;
+
+    Ok(())
+}
+
 #[component]
 pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> impl IntoView {
     let delete_instance = create_server_action::<DeleteWorkoutInstance>();
+    let delete_occurence = create_server_action::<DeleteWorkoutOccurence>();
     view! {
         <div class="column">
             <div class="columns" style="margin-bottom:0px;">
@@ -157,18 +201,54 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                                                         >
                                                             info
                                                         </i>
-                                                        <i
-                                                            class="material-symbols-rounded"
-                                                            on:click=move |_| {
-                                                                delete_instance
-                                                                    .dispatch(DeleteWorkoutInstance {
-                                                                        instance_id: e.id,
-                                                                    });
-                                                            }
-                                                        >
+                                                        <div class="dropdown is-hoverable">
+                                                            <div class="dropdown-trigger" style="width:50px;">
+                                                                <i
+                                                                    aria-haspopup="true"
+                                                                    aria-controls=format!("workout-dropdown-{}", e.id)
+                                                                    class="material-symbols-rounded"
+                                                                >
 
-                                                            close
-                                                        </i>
+                                                                    arrow_drop_down
+                                                                </i>
+                                                            </div>
+                                                            <div
+                                                                class="dropdown-menu"
+                                                                id=format!("workout-dropdown-{}", e.id)
+                                                                role="menu"
+                                                            >
+                                                                <div class="dropdown-content">
+                                                                    <a
+                                                                        href="#"
+                                                                        class="dropdown-item"
+                                                                        on:click=move |_| {
+                                                                            delete_instance
+                                                                                .dispatch(DeleteWorkoutInstance {
+                                                                                    instance_id: e.id,
+                                                                                });
+                                                                        }
+                                                                    >
+
+                                                                        Delete All
+                                                                    </a>
+                                                                    <a
+                                                                        href="#"
+                                                                        class="dropdown-item"
+                                                                        on:click=move |_| {
+                                                                            delete_occurence
+                                                                                .dispatch(DeleteWorkoutOccurence {
+                                                                                    instance_id: e.id,
+                                                                                    week: week.week,
+                                                                                    day: day,
+                                                                                });
+                                                                        }
+                                                                    >
+
+                                                                        Delete Occurence
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                         <Show when=move || { show_info() } fallback=|| {}>
                                                             <div class="tooltip-wrapper">
                                                                 <div class="tooltip">
@@ -222,7 +302,6 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct WorkoutInstance {
     id: i64,
     user_id: i64,
@@ -230,6 +309,7 @@ pub struct WorkoutInstance {
     rrule: String,
     active: bool,
     template: WorkoutTemplate,
+    exclusion_dates: Vec<DateTime<Local>>,
 }
 #[cfg(feature = "ssr")]
 impl sqlx::FromRow<'_, PgRow> for WorkoutInstance {
@@ -250,6 +330,7 @@ impl sqlx::FromRow<'_, PgRow> for WorkoutInstance {
             rrule: row.get("rrule"),
             active: row.get("active"),
             template: template,
+            exclusion_dates: row.try_get("exclusion_dates").unwrap_or_default(),
         })
     }
 }
@@ -372,10 +453,13 @@ pub async fn get_workout_instances(
                     t.user_id,
                     t.template_name,
                     t.workout_type::text
-                ) as template
+                ) as template,
+                ARRAY_AGG(ex.exclusion_date) as exclusion_dates
             FROM workout_instances i
             INNER JOIN workout_templates t ON i.workout_template_id=t.id
+            LEFT JOIN workout_exclusion_dates ex ON ex.workout_instance_id=i.id
             WHERE i.user_id=$1::bigint and i.active and i.start_date < $2
+            GROUP BY i.id, i.user_id, i.start_date, i.rrule, i.active, t.id, t.user_id, t.template_name, t.workout_type
         "#,
     )
     .bind(user.id as i32)
@@ -526,14 +610,22 @@ pub async fn get_week_workouts(
     }
 
     for instance in instances {
-        let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local))).rrule(
-            instance
-                .rrule
-                .parse::<RRule<Unvalidated>>()
-                .unwrap()
-                .validate(instance.start_date.with_timezone(&Tz::Local(Local)))
-                .unwrap(),
-        );
+        let rrule = RRuleSet::new(instance.start_date.with_timezone(&Tz::Local(Local)))
+            .rrule(
+                instance
+                    .rrule
+                    .parse::<RRule<Unvalidated>>()
+                    .unwrap()
+                    .validate(instance.start_date.with_timezone(&Tz::Local(Local)))
+                    .unwrap(),
+            )
+            .set_exdates(
+                instance
+                    .exclusion_dates
+                    .iter()
+                    .map(|d| d.with_timezone(&Tz::Local(Local)))
+                    .collect(),
+            );
         let steps_and_scaling = get_instance_steps_with_scaling(
             instance.id,
             rrule

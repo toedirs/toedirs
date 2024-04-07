@@ -277,18 +277,6 @@ fn Overview() -> impl IntoView {
                         </div>
                     </div>
                 </div>
-                <div class="column is-flex">
-                    <div class="card is-fullwidth">
-                        <div class="card-header">
-                            <p class="card-header-title">Fitness & Fatigue</p>
-                        </div>
-                        <div class="card-content">
-                            <div class="content">
-                                <div class="block">test</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     }
