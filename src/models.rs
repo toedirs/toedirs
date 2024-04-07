@@ -4,6 +4,7 @@ use chrono::{DateTime, Local, Duration};
 use fitparser::{profile::MesgNum, FitDataRecord, Value};
 #[cfg(feature = "ssr")]
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::{query, Row};
 use thiserror::Error;
@@ -795,7 +796,7 @@ pub async fn insert_laps(
     Ok(())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct UserPreferences{
     pub user_id: i64,
     pub start_time: Option<DateTime<Local>>,

@@ -1,6 +1,11 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 #[cfg(feature = "ssr")]
+use crate::models::get_user_preferences;
+use crate::models::UserPreferences;
+#[cfg(feature = "ssr")]
+use chrono::Local;
+#[cfg(feature = "ssr")]
 use chrono::{DateTime, Utc};
 use leptos::*;
 use leptos_router::*;
@@ -133,6 +138,17 @@ pub async fn update_user_preferences(
     Ok(())
 }
 
+#[server]
+pub async fn get_preferences() -> Result<UserPreferences, ServerFnError> {
+    let pool = pool()?;
+    let auth = auth()?;
+    let user = auth
+        .current_user
+        .ok_or(ServerFnError::new("Not logged in".to_string()))?;
+    let preferences = get_user_preferences(user.id, Local::now(), &pool).await;
+    Ok(preferences)
+}
+
 #[component]
 pub fn UserSettings(show: RwSignal<bool>) -> impl IntoView {
     let close = move |_| show.set(false);
@@ -140,6 +156,14 @@ pub fn UserSettings(show: RwSignal<bool>) -> impl IntoView {
     let anaerobic_threshold = create_rw_signal(160);
     let max_heartrate = create_rw_signal(180);
     let update_user_preferences = create_server_action::<UpdateUserPreferences>();
+    spawn_local(async move {
+        let preferences = get_preferences()
+            .await
+            .expect("can't load user preferences");
+        aerobic_threshold.set(preferences.aerobic_threshold as u32);
+        anaerobic_threshold.set(preferences.anaerobic_threshold as u32);
+        max_heartrate.set(preferences.max_heartrate as u32);
+    });
     view! {
         <Show when=move || { show() } fallback=|| {}>
             <ActionForm

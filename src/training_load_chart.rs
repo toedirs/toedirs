@@ -85,7 +85,7 @@ pub fn TrainingLoadChart(
 ) -> impl IntoView {
     let training_load = create_resource(
         move || (from(), to()),
-        move |_| training_load_action(from(), to()),
+        move |(from, to)| training_load_action(from, to),
     );
 
     view! {
