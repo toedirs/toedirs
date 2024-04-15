@@ -1,4 +1,8 @@
-use std::{collections::HashMap, iter};
+use std::{
+    collections::HashMap,
+    hash::{DefaultHasher, Hash, Hasher},
+    iter,
+};
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
@@ -187,12 +191,19 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                                         .into_iter()
                                         .map(|e| {
                                             let show_info = create_rw_signal(false);
+                                            let mut s = DefaultHasher::new();
+                                            e.hash(&mut s);
+                                            let color = s.finish() % 360;
                                             view! {
                                                 <div class="column is-fullwidth center-align valign-wrapper">
                                                     <div
                                                         class="box center-align valign-wrapper"
-                                                        style="position:relative;"
+                                                        style=format!(
+                                                            "position:relative;background-color:hsl({},80%,85%)",
+                                                            color,
+                                                        )
                                                     >
+
                                                         {e.name.clone()}
                                                         <i
                                                             class="material-symbols-rounded"
@@ -572,6 +583,13 @@ pub struct Workout {
     id: i64,
     name: String,
     steps: Vec<WorkoutStep>,
+}
+
+impl Hash for Workout {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+        self.name.hash(state);
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
