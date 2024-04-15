@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT \n            activities.id, \n            activities.start_time, \n            activities.duration,\n            activities.load,\n            COALESCE(string_agg(sessions.sport,', '),'General') as \"sport!\" \n        FROM activities \n        JOIN sessions on sessions.activity_id=activities.id\n        WHERE activities.user_id = $1::bigint\n        GROUP BY activities.id\n        ORDER BY activities.start_time DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "start_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "duration",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "load",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "sport!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "629ebe8f36c7c8530428982c11625ef957f16b25a9b790d63905df831a17d06e"
+}

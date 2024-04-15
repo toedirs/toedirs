@@ -18,6 +18,7 @@ pub struct ActivityListEntry {
     pub id: i64,
     pub start_time: DateTime<Local>,
     pub duration: BigDecimal,
+    pub load: Option<i32>,
     pub sport: String,
 }
 
@@ -36,6 +37,7 @@ pub async fn get_activity_list() -> Result<Vec<ActivityListEntry>, ServerFnError
             activities.id, 
             activities.start_time, 
             activities.duration,
+            activities.load,
             COALESCE(string_agg(sessions.sport,', '),'General') as "sport!" 
         FROM activities 
         JOIN sessions on sessions.activity_id=activities.id
@@ -91,47 +93,68 @@ pub fn ActivityList() -> impl IntoView {
                                 }
                                 Ok(activities) => {
                                     view! {
+                                        <div class="box columns">
+                                            <div class="column is-auto">
+                                                <div class="columns is-full">
+                                                    <div class="column is-two-fifths">
+                                                        <h6 class="title is-6">Activity</h6>
+                                                    </div>
+                                                    <div class="column is-one-fifth">
+                                                        <h6 class="title is-6">Date</h6>
+                                                    </div>
+                                                    <div class="column is-one-fifth">
+                                                        <h6 class="title is-6">Duration</h6>
+                                                    </div>
+                                                    <div class="column is-one-fifth">
+                                                        <h6 class="title is-6">Load</h6>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="column is-1"></div>
+                                        </div>
                                         <For
                                             each=move || activities.clone()
                                             key=|e| e.id
                                             let:activity
                                         >
-                                            <div class="columns">
-                                                <div class="column is-full level">
-                                                    <div class="box level">
-                                                        <div class="level-left">
-                                                            <div class="block">
-                                                                <p class="title is-5">
-                                                                    <a
-                                                                        href="#!"
-                                                                        on:click=move |_| show_activity.set(Some(activity.id))
-                                                                    >
-                                                                        {activity.sport}
-                                                                    </a>
-                                                                </p>
-                                                                <p class="subtitle is-7">
-                                                                    {activity.start_time.format("%Y-%m-%d").to_string()} <br/>
-                                                                    {format_duration(
-                                                                            Duration::new(activity.duration.to_u64().unwrap(), 0),
-                                                                        )
-                                                                        .to_string()}
-                                                                </p>
-                                                            </div>
+                                            <div class="box columns">
+                                                <div class="column is-auto">
+                                                    <div class="columns is-full">
+                                                        <div class="column is-two-fifths">
+                                                            <a
+                                                                class="is-title"
+                                                                href="#!"
+                                                                on:click=move |_| show_activity.set(Some(activity.id))
+                                                            >
+                                                                {activity.sport}
+                                                            </a>
                                                         </div>
-                                                        <a
-                                                            href="#!"
-                                                            class="level-right"
-                                                            on:click=move |_| {
-                                                                delete_activity
-                                                                    .dispatch(DeleteActivity {
-                                                                        activity_id: activity.id,
-                                                                    });
-                                                            }
-                                                        >
-
-                                                            <i class="material-symbols-rounded">delete</i>
-                                                        </a>
+                                                        <div class="column is-one-fifth">
+                                                            {activity.start_time.format("%Y-%m-%d").to_string()}
+                                                        </div>
+                                                        <div class="column is-one-fifth">
+                                                            {format_duration(
+                                                                    Duration::new(activity.duration.to_u64().unwrap(), 0),
+                                                                )
+                                                                .to_string()}
+                                                        </div>
+                                                        <div class="column is-one-fifth">{activity.load}</div>
                                                     </div>
+                                                </div>
+                                                <div class="column is-1">
+                                                    <a
+                                                        href="#!"
+                                                        class="level-item"
+                                                        on:click=move |_| {
+                                                            delete_activity
+                                                                .dispatch(DeleteActivity {
+                                                                    activity_id: activity.id,
+                                                                });
+                                                        }
+                                                    >
+
+                                                        <i class="material-symbols-rounded">delete</i>
+                                                    </a>
                                                 </div>
                                             </div>
                                         </For>
