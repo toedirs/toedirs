@@ -1,4 +1,4 @@
-FROM clux/muslrust:nightly-2024-04-03 as builder
+FROM clux/muslrust:nightly as builder
 ARG BINARY_NAME_DEFAULT=toedirs
 RUN groupadd -g 10001 -r dockergrp && useradd -r -g dockergrp -u 10001 dockeruser
 ENV BINARY_NAME=$BINARY_NAME_DEFAULT
