@@ -3,11 +3,16 @@ version: '3.8'
 services:
   toedirs:
     build:
-      dockerfile: Dockerfile.musl
+      dockerfile: Dockerfile
 
     volumes:
       - .:/app:cached
 
+    # Overrides default command so things don't shut down after the process ends.
+    command: cargo leptos watch --hot-reload
+
+    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
+    #network_mode: service:db
     ports:
     - "8479:8479"
 
@@ -18,10 +23,11 @@ services:
       # DB_NAME: toedi
       # DB_PASSWORD: toedi
       # DB_HOST: db
-      DATABASE_URL: postgres://toedi:toedi@db:5432/toedi
+      DATABASE_URL: postgres://toedi:toedi@localhost:5432/toedi
       LEPTOS_SITE_ADDR: 0.0.0.0:8479
-      LEPTOS_SITE_ROOT: /site
-      PROFILE: release
+      PROFILE: debug
+    profiles:
+      - frontend
 
   db:
     image: postgres:latest

@@ -2,32 +2,19 @@ version: '3.8'
 
 services:
   toedirs:
-    build:
-      dockerfile: Dockerfile
-
-    volumes:
-      - .:/app:cached
-
-    # Overrides default command so things don't shut down after the process ends.
-    command: cargo leptos watch --hot-reload
-
-    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
-    #network_mode: service:db
+    image: panaetius123/toedirs:latest
     ports:
     - "8479:8479"
 
-    # Use "forwardPorts" in **devcontainer.json** to forward an app port locally.
-    # (Adding the "ports" property to this file will not forward from a Codespace.)
     environment:
-      # DB_USER: toedi
-      # DB_NAME: toedi
-      # DB_PASSWORD: toedi
-      # DB_HOST: db
-      DATABASE_URL: postgres://toedi:toedi@localhost:5432/toedi
+      # change this to match username/password in postgres container
+      DATABASE_URL: postgres://toedi:toedi@db:5432/toedi
       LEPTOS_SITE_ADDR: 0.0.0.0:8479
-      PROFILE: debug
-    profiles:
-      - frontend
+      LEPTOS_SITE_ROOT: /site
+      PROFILE: release
+    networks:
+      - toedirs_internal
+      - toedirs_public
 
   db:
     image: postgres:latest
@@ -37,12 +24,13 @@ services:
     environment:
       POSTGRES_USER: toedi
       POSTGRES_DB: toedi
+      # change password
       POSTGRES_PASSWORD: toedi
-    ports:
-    - "5432:5432"
-
-    # Add "forwardPorts": ["5432"] to **devcontainer.json** to forward PostgreSQL locally.
-    # (Adding the "ports" property to this file will not forward from a Codespace.)
-
+    networks:
+      - toedirs_internal
 volumes:
   postgres-data:
+networks:
+  toedirs_internal:
+    internal: true
+  toedirs_public:

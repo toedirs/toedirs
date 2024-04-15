@@ -1,11 +1,11 @@
-FROM clux/muslrust:nightly as builder
+FROM clux/muslrust:nightly-2024-04-04 as builder
 ARG BINARY_NAME_DEFAULT=toedirs
 RUN groupadd -g 10001 -r dockergrp && useradd -r -g dockergrp -u 10001 dockeruser
 ENV BINARY_NAME=$BINARY_NAME_DEFAULT
 ENV LEPTOS_BIN_TARGET_TRIPLE=x86_64-unknown-linux-musl
 
 # Install cargo-leptos
-RUN cargo install cargo-leptos 
+RUN cargo install cargo-leptos --locked
 
 # Add the WASM target
 RUN rustup target add wasm32-unknown-unknown
