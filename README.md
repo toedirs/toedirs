@@ -1,5 +1,6 @@
 # Toedi fitness tracking platform specialized on mountaineering
 
+See the [documentation](https://gettoedi.ch/) for more details.
 
 ## Running the project
 
