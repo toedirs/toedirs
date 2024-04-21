@@ -150,7 +150,7 @@ pub enum EndType {
 
 #[component]
 pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
-    let workout_templates = create_resource(show, |value| async move {
+    let workout_templates = create_resource(move||show(), |value| async move {
         if value {
             get_workout_templates().await.unwrap_or_default()
         } else {
@@ -171,7 +171,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     let repetition_frequency = create_rw_signal(1);
     let repetition_on_day = create_rw_signal(HashSet::<String>::new());
     let month_day = create_rw_signal(1);
-    let repetition_rule = create_resource(
+    let repetition_rule = create_local_resource(
         move || {
             (
                 start_date.get(),
@@ -250,42 +250,43 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     let close = move |_| show.set(false);
 
     view! {
-        <Show when=move || { show() } fallback=|| {}>
-            <Form
-                action=""
-                on:submit=move |ev: SubmitEvent| {
-                    add_workout_action
-                        .dispatch(AddWorkout {
-                            workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
-                            start_date: start_date()
-                                .and_then(|d| {
-                                    NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
-                                        .map(|d| {
-                                            Local
-                                                .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
-                                                .unwrap()
-                                        })
-                                        .ok()
-                                })
-                                .unwrap(),
-                            rrule: repetition_rule.get().unwrap(),
-                            param: Some(
-                                parameter_override
-                                    .get_untracked()
-                                    .iter()
-                                    .map(|(k, v)| ParameterOverride {
-                                        id: *k,
-                                        value: *v,
-                                    })
-                                    .collect::<Vec<_>>(),
-                            ),
-                        });
-                    ev.prevent_default();
-                    show.set(false);
-                }
-            >
+        <Show when=move || { show.get() } fallback=|| {}>
+         <Form
+             action=""
+             on:submit=move |ev: SubmitEvent| {
+                 ev.prevent_default();
+                 add_workout_action
+                     .dispatch(AddWorkout {
+                         workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
+                         start_date: start_date.get_untracked()
+                             .and_then(|d| {
+                                 NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
+                                     .map(|d| {
+                                         Local
+                                             .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                                             .unwrap()
+                                     })
+                                     .ok()
+                             })
+                             .unwrap(),
+                         rrule: repetition_rule.get().unwrap(),
+                         param: Some(
+                             parameter_override
+                                 .get_untracked()
+                                 .iter()
+                                 .map(|(k, v)| ParameterOverride {
+                                     id: *k,
+                                     value: *v,
+                                 })
+                                 .collect::<Vec<_>>(),
+                         ),
+                     });
+                 workout_type.set("0".to_string());
+                 show.set(false);
+             }
+         >
 
-                <div class="modal is-active">
+                <div class=move||format!("modal {}", if show.get() {"is-active"}else{""})>
                     <div class="modal-background" on:click=close></div>
                     <div class="modal-card">
                         <div class="modal-card-head">
@@ -302,8 +303,8 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                         <div class="select">
                                             <select
                                                 name="workout_templ"
-                                                value=workout_type
-                                                on:input=move |ev| workout_type.set(event_target_value(&ev))
+                                                value=move||workout_type.get()
+                                                on:change=move |ev| workout_type.update(|v|*v=event_target_value(&ev))
                                             >
                                                 {move || {
                                                     workout_templates
@@ -331,7 +332,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                                     <option
                                                                         value=item.0.clone()
                                                                         disabled=item.2
-                                                                        selected=item.0 == workout_type()
+                                                                        selected=move||item.0 == workout_type.get_untracked()
                                                                     >
                                                                         {item.1}
                                                                     </option>
@@ -360,7 +361,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 .iter()
                                                 .filter(|t| t.id.to_string() == workout_type.get())
                                                 .next()
-                                                .unwrap()
+                                                .map(|t|t
                                                 .parameters
                                                 .iter()
                                                 .enumerate()
@@ -402,7 +403,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                         </div>
                                                     }
                                                 })
-                                                .collect_view()
+                                                .collect_view())
                                         }}
 
                                     </Show>
