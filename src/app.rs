@@ -28,10 +28,14 @@ if #[cfg(feature = "ssr")] {
         }
     }
 }
+#[derive(Copy, Clone)]
+pub struct FitFileUploaded(pub RwSignal<i32>);
 
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
+    let uploaded = create_rw_signal(0);
+    provide_context(FitFileUploaded(uploaded));
     let (show_upload, set_show_upload) = create_signal(false);
     let show_settings = create_rw_signal(false);
     let login = create_server_action::<Login>();

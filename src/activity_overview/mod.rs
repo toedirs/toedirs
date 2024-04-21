@@ -2,7 +2,10 @@ use std::time::Duration;
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use crate::{activity_overview::activity_details::ActivityDetails, error_template::ErrorTemplate};
+use crate::{
+    activity_overview::activity_details::ActivityDetails, app::FitFileUploaded,
+    error_template::ErrorTemplate,
+};
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Local};
 use humantime::format_duration;
@@ -74,7 +77,8 @@ pub async fn delete_activity(activity_id: i64) -> Result<(), ServerFnError> {
 
 #[component]
 pub fn ActivityList() -> impl IntoView {
-    let activities = create_resource(move || (), move |_| get_activity_list());
+    let uploaded = use_context::<FitFileUploaded>().unwrap();
+    let activities = create_resource(move || (uploaded.0.get()), move |_| get_activity_list());
     let show_activity = create_rw_signal(None);
     let delete_activity = create_server_action::<DeleteActivity>();
     view! {

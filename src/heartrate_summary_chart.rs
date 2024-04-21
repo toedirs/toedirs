@@ -1,6 +1,6 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use crate::error_template::ErrorTemplate;
+use crate::{app::FitFileUploaded, error_template::ErrorTemplate};
 #[cfg(feature = "ssr")]
 use chrono::Duration;
 use chrono::{DateTime, Local};
@@ -70,9 +70,10 @@ pub fn HeartrateSummaryChart(
     #[prop(into)] from: Memo<Option<DateTime<Local>>>,
     #[prop(into)] to: Memo<Option<DateTime<Local>>>,
 ) -> impl IntoView {
+    let uploaded = use_context::<FitFileUploaded>().unwrap();
     let zone_summary = create_resource(
-        move || (from(), to()),
-        move |_| heartrate_zone_summary_action(from(), to()),
+        move || (from(), to(), uploaded.0()),
+        move |(from, to, _)| heartrate_zone_summary_action(from, to),
     );
 
     view! {

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 #[cfg(feature = "ssr")]
 use anyhow::{bail, Context, Result};
 #[cfg(feature = "ssr")]
@@ -13,6 +15,8 @@ use leptos::*;
 use leptos_router::*;
 #[cfg(feature = "ssr")]
 use sqlx::PgPool;
+
+use crate::app::FitFileUploaded;
 
 #[cfg(feature = "ssr")]
 use super::auth::User;
@@ -136,7 +140,12 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
 
 #[component]
 pub fn FitUploadForm(show: ReadSignal<bool>, show_set: WriteSignal<bool>) -> impl IntoView {
+    let uploaded = use_context::<FitFileUploaded>().unwrap();
     let on_submit = move |_ev: SubmitEvent| {
+        set_timeout(
+            move || uploaded.0.update(|v| *v += 1),
+            Duration::from_secs(2),
+        );
         show_set(false);
     };
     let close = move |_| show_set(false);

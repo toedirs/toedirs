@@ -7,7 +7,7 @@ use leptos::*;
 use leptos_charts::{BarChart, BarChartOptions};
 use serde::{Deserialize, Serialize};
 
-use crate::error_template::ErrorTemplate;
+use crate::{app::FitFileUploaded, error_template::ErrorTemplate};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrainingLoad {
     pub load: i64,
@@ -83,9 +83,10 @@ pub fn TrainingLoadChart(
     #[prop(into)] from: Memo<Option<DateTime<Local>>>,
     #[prop(into)] to: Memo<Option<DateTime<Local>>>,
 ) -> impl IntoView {
+    let uploaded = use_context::<FitFileUploaded>().unwrap();
     let training_load = create_resource(
-        move || (from(), to()),
-        move |(from, to)| training_load_action(from, to),
+        move || (from(), to(), uploaded.0()),
+        move |(from, to, _)| training_load_action(from, to),
     );
 
     view! {
