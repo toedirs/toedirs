@@ -195,8 +195,8 @@ pub fn WorkoutDay(
 
                 </div>
             </div>
-            <div class="columns">
-                <div class="column is-full">
+            <div class="columns workouts">
+                <div class="column  is-full">
                     {week
                         .workouts
                         .get(&day)
@@ -212,68 +212,79 @@ pub fn WorkoutDay(
                                             e.hash(&mut s);
                                             let color = s.finish() % 360;
                                             view! {
-                                                <div class="column is-full center-align valign-wrapper">
+                                                <div class="column is-full center-align valign-wrapper py-1">
                                                     <div
-                                                        class="box center-align valign-wrapper"
+                                                        class="box center-align valign-wrapper p-2 level"
                                                         style=format!(
                                                             "position:relative;background-color:hsl({},80%,85%)",
                                                             color,
                                                         )
                                                     >
 
-                                                        {e.name.clone()}
-                                                        <i
-                                                            class="material-symbols-rounded"
-                                                            on:mouseover=move |_| show_info.set(true)
-                                                            on:mouseout=move |_| show_info.set(false)
-                                                        >
-                                                            info
-                                                        </i>
-                                                        <div class="dropdown is-hoverable">
-                                                            <div class="dropdown-trigger" style="width:50px;">
+                                                        <span class="level-left">
+
+                                                            {e.name.clone()}
+                                                        </span>
+                                                        <div class="level-right">
+                                                            <span class="icon">
                                                                 <i
-                                                                    aria-haspopup="true"
-                                                                    aria-controls=format!("workout-dropdown-{}", e.id)
                                                                     class="material-symbols-rounded"
+                                                                    on:mouseover=move |_| show_info.set(true)
+                                                                    on:mouseout=move |_| show_info.set(false)
+                                                                >
+                                                                    info
+                                                                </i>
+                                                            </span>
+                                                            <div class="dropdown is-hoverable">
+                                                                <div class="dropdown-trigger">
+                                                                    <span class="icon is-large">
+                                                                        <i
+                                                                            aria-haspopup="true"
+                                                                            aria-controls=format!("workout-dropdown-{}", e.id)
+                                                                            class="material-symbols-rounded"
+                                                                            style="font-size:48px"
+                                                                        >
+
+                                                                            arrow_drop_down
+                                                                        </i>
+                                                                    </span>
+                                                                </div>
+                                                                <div
+                                                                    class="dropdown-menu"
+                                                                    id=format!("workout-dropdown-{}", e.id)
+                                                                    role="menu"
                                                                 >
 
-                                                                    arrow_drop_down
-                                                                </i>
-                                                            </div>
-                                                            <div
-                                                                class="dropdown-menu"
-                                                                id=format!("workout-dropdown-{}", e.id)
-                                                                role="menu"
-                                                            >
-                                                                <div class="dropdown-content">
-                                                                    <a
-                                                                        href="#"
-                                                                        class="dropdown-item"
-                                                                        on:click=move |_| {
-                                                                            delete_instance
-                                                                                .dispatch(DeleteWorkoutInstance {
-                                                                                    instance_id: e.id,
-                                                                                });
-                                                                        }
-                                                                    >
+                                                                    <div class="dropdown-content">
+                                                                        <a
+                                                                            href="#"
+                                                                            class="dropdown-item"
+                                                                            on:click=move |_| {
+                                                                                delete_instance
+                                                                                    .dispatch(DeleteWorkoutInstance {
+                                                                                        instance_id: e.id,
+                                                                                    });
+                                                                            }
+                                                                        >
 
-                                                                        Delete All
-                                                                    </a>
-                                                                    <a
-                                                                        href="#"
-                                                                        class="dropdown-item"
-                                                                        on:click=move |_| {
-                                                                            delete_occurence
-                                                                                .dispatch(DeleteWorkoutOccurence {
-                                                                                    instance_id: e.id,
-                                                                                    week: week.week,
-                                                                                    day: day,
-                                                                                });
-                                                                        }
-                                                                    >
+                                                                            Delete All
+                                                                        </a>
+                                                                        <a
+                                                                            href="#"
+                                                                            class="dropdown-item"
+                                                                            on:click=move |_| {
+                                                                                delete_occurence
+                                                                                    .dispatch(DeleteWorkoutOccurence {
+                                                                                        instance_id: e.id,
+                                                                                        week: week.week,
+                                                                                        day: day,
+                                                                                    });
+                                                                            }
+                                                                        >
 
-                                                                        Delete Occurence
-                                                                    </a>
+                                                                            Delete Occurence
+                                                                        </a>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>

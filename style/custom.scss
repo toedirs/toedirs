@@ -49,6 +49,14 @@
     }
   }
 
+  .columns.workouts {
+    margin-top: 0;
+
+    .dropdown-menu {
+      top: 50%;
+    }
+  }
+
   .column:last-child {
     border-width: 1px 0 0 0;
   }
