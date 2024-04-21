@@ -149,9 +149,26 @@ pub async fn delete_workout_occurence(
 }
 
 #[component]
-pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> impl IntoView {
+pub fn WorkoutDay(
+    week: WorkoutWeek,
+    today: DateTime<Local>,
+    day: Weekday,
+    #[prop(into)] on_change: Callback<()>,
+) -> impl IntoView {
     let delete_instance = create_server_action::<DeleteWorkoutInstance>();
     let delete_occurence = create_server_action::<DeleteWorkoutOccurence>();
+    create_effect(move |_| {
+        // run callback if server action was run
+        if let Some(_) = delete_instance.value().get() {
+            on_change(());
+        }
+    });
+    create_effect(move |_| {
+        // run callback if server action was run
+        if let Some(_) = delete_occurence.value().get() {
+            on_change(());
+        }
+    });
     view! {
         <div class="column">
             <div class="columns" style="margin-bottom:0px;">
@@ -195,7 +212,7 @@ pub fn WorkoutDay(week: WorkoutWeek, today: DateTime<Local>, day: Weekday) -> im
                                             e.hash(&mut s);
                                             let color = s.finish() % 360;
                                             view! {
-                                                <div class="column is-fullwidth center-align valign-wrapper">
+                                                <div class="column is-full center-align valign-wrapper">
                                                     <div
                                                         class="box center-align valign-wrapper"
                                                         style=format!(
@@ -598,6 +615,24 @@ pub struct WorkoutWeek {
     workouts: HashMap<Weekday, Vec<Workout>>,
     scaling: i32,
 }
+impl WorkoutWeek {
+    pub fn key(&self) -> (i32, u32, usize, i32, usize) {
+        (
+            self.week.0,
+            self.week.1,
+            self.workouts.iter().map(|(_, v)| v.len()).sum(),
+            self.scaling,
+            self.workouts
+                .iter()
+                .map(|(_, v)| {
+                    v.iter()
+                        .map(|e| e.steps.iter().map(|s| s.value as usize).sum::<usize>())
+                        .sum::<usize>()
+                })
+                .sum::<usize>(),
+        )
+    }
+}
 #[server]
 pub async fn get_week_workouts(
     from: NaiveDate,
@@ -779,6 +814,29 @@ pub fn WorkoutCalendar() -> impl IntoView {
     let set_scaling = create_server_action::<SetWeekScaling>();
     let show_add_workout = create_rw_signal(false);
     let show_create_workout = create_rw_signal(false);
+
+    let reload_calendar = move |_| {
+        spawn_local(async move {
+            let date_range =
+                weeks.with_untracked(|wk| (wk.first().map(|w| w.week), wk.last().map(|w| w.week)));
+            if let (Some(start), Some(end)) = date_range {
+                let week_entries = get_week_workouts(
+                    NaiveDate::from_isoywd_opt(start.0, start.1, Weekday::Mon).unwrap(),
+                    NaiveDate::from_isoywd_opt(end.0, end.1, Weekday::Sun).unwrap(),
+                )
+                .await;
+                if let Ok(week_entries) = week_entries {
+                    weeks.update(|v| *v = week_entries);
+                }
+            }
+        })
+    };
+    create_effect(move |_| {
+        // run callback if server action was run
+        if let Some(_) = set_scaling.value().get() {
+            reload_calendar(());
+        }
+    });
     view! {
         <div class="workout-calendar">
             <div class="calendar-row calendar-header white-text blue darken-1">
@@ -813,18 +871,53 @@ pub fn WorkoutCalendar() -> impl IntoView {
             <div class="calendar-container" node_ref=calendar_list_el>
 
                 <div class="calendar-body">
-                    <For each=move || weeks.get() key=|i| format!("{:?}", i.week) let:item>
+                    <For each=move || weeks.get() key=|i| i.key() let:item>
                         <div class="calendar-row cal-content">
                             <div class="column center-align valign-wrapper">
                                 {item.week.0} - {item.week.1}
                             </div>
-                            <WorkoutDay week=item.clone() today=today day=Weekday::Mon/>
-                            <WorkoutDay week=item.clone() today=today day=Weekday::Tue/>
-                            <WorkoutDay week=item.clone() today=today day=Weekday::Wed/>
-                            <WorkoutDay week=item.clone() today=today day=Weekday::Thu/>
-                            <WorkoutDay week=item.clone() today=today day=Weekday::Fri/>
-                            <WorkoutDay week=item.clone() today=today day=Weekday::Sat/>
-                            <WorkoutDay week=item.clone() today=today day=Weekday::Sun/>
+                            <WorkoutDay
+                                week=item.clone()
+                                today=today
+                                day=Weekday::Mon
+                                on_change=reload_calendar
+                            />
+                            <WorkoutDay
+                                week=item.clone()
+                                today=today
+                                day=Weekday::Tue
+                                on_change=reload_calendar
+                            />
+                            <WorkoutDay
+                                week=item.clone()
+                                today=today
+                                day=Weekday::Wed
+                                on_change=reload_calendar
+                            />
+                            <WorkoutDay
+                                week=item.clone()
+                                today=today
+                                day=Weekday::Thu
+                                on_change=reload_calendar
+                            />
+                            <WorkoutDay
+                                week=item.clone()
+                                today=today
+                                day=Weekday::Fri
+                                on_change=reload_calendar
+                            />
+                            <WorkoutDay
+                                week=item.clone()
+                                today=today
+                                day=Weekday::Sat
+                                on_change=reload_calendar
+                            />
+                            <WorkoutDay
+                                week=item.clone()
+                                today=today
+                                day=Weekday::Sun
+                                on_change=reload_calendar
+                            />
                             <div class="column field">
                                 <div class="control select">
                                     <select
@@ -951,7 +1044,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
                 </div>
             </div>
             <CreateWorkoutDialog show=show_create_workout/>
-            <AddWorkoutDialog show=show_add_workout/>
+            <AddWorkoutDialog show=show_add_workout on_save=reload_calendar/>
         </div>
     }
 }

@@ -149,14 +149,20 @@ pub enum EndType {
 }
 
 #[component]
-pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
-    let workout_templates = create_resource(move||show(), |value| async move {
-        if value {
-            get_workout_templates().await.unwrap_or_default()
-        } else {
-            Vec::new()
-        }
-    });
+pub fn AddWorkoutDialog(
+    show: RwSignal<bool>,
+    #[prop(into)] on_save: Callback<()>,
+) -> impl IntoView {
+    let workout_templates = create_resource(
+        move || show(),
+        |value| async move {
+            if value {
+                get_workout_templates().await.unwrap_or_default()
+            } else {
+                Vec::new()
+            }
+        },
+    );
     let workout_type = create_rw_signal("0".to_string());
     let parameter_override = create_rw_signal(HashMap::<i64, i32>::new());
     let start_date = create_rw_signal(Some(
@@ -248,45 +254,53 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
     );
     let add_workout_action = create_server_action::<AddWorkout>();
     let close = move |_| show.set(false);
+    create_effect(move |_| {
+        // run callback if server action was run
+        if let Some(_) = add_workout_action.value().get() {
+            workout_type.set("0".to_string());
+            show.set(false);
+            on_save(());
+        }
+    });
 
     view! {
         <Show when=move || { show.get() } fallback=|| {}>
-         <Form
-             action=""
-             on:submit=move |ev: SubmitEvent| {
-                 ev.prevent_default();
-                 add_workout_action
-                     .dispatch(AddWorkout {
-                         workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
-                         start_date: start_date.get_untracked()
-                             .and_then(|d| {
-                                 NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
-                                     .map(|d| {
-                                         Local
-                                             .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
-                                             .unwrap()
-                                     })
-                                     .ok()
-                             })
-                             .unwrap(),
-                         rrule: repetition_rule.get().unwrap(),
-                         param: Some(
-                             parameter_override
-                                 .get_untracked()
-                                 .iter()
-                                 .map(|(k, v)| ParameterOverride {
-                                     id: *k,
-                                     value: *v,
-                                 })
-                                 .collect::<Vec<_>>(),
-                         ),
-                     });
-                 workout_type.set("0".to_string());
-                 show.set(false);
-             }
-         >
+            <Form
+                action=""
+                on:submit=move |ev: SubmitEvent| {
+                    ev.prevent_default();
+                    let start_date = start_date
+                        .get_untracked()
+                        .and_then(|d| {
+                            NaiveDate::parse_from_str(d.as_str(), "%Y-%m-%d")
+                                .map(|d| {
+                                    Local
+                                        .from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap())
+                                        .unwrap()
+                                })
+                                .ok()
+                        })
+                        .unwrap();
+                    add_workout_action
+                        .dispatch(AddWorkout {
+                            workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
+                            start_date: start_date,
+                            rrule: repetition_rule.get().unwrap(),
+                            param: Some(
+                                parameter_override
+                                    .get_untracked()
+                                    .iter()
+                                    .map(|(k, v)| ParameterOverride {
+                                        id: *k,
+                                        value: *v,
+                                    })
+                                    .collect::<Vec<_>>(),
+                            ),
+                        });
+                }
+            >
 
-                <div class=move||format!("modal {}", if show.get() {"is-active"}else{""})>
+                <div class=move || format!("modal {}", if show.get() { "is-active" } else { "" })>
                     <div class="modal-background" on:click=close></div>
                     <div class="modal-card">
                         <div class="modal-card-head">
@@ -303,9 +317,12 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                         <div class="select">
                                             <select
                                                 name="workout_templ"
-                                                value=move||workout_type.get()
-                                                on:change=move |ev| workout_type.update(|v|*v=event_target_value(&ev))
+                                                value=move || workout_type.get()
+                                                on:change=move |ev| {
+                                                    workout_type.update(|v| *v = event_target_value(&ev))
+                                                }
                                             >
+
                                                 {move || {
                                                     workout_templates
                                                         .get()
@@ -332,7 +349,7 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                                     <option
                                                                         value=item.0.clone()
                                                                         disabled=item.2
-                                                                        selected=move||item.0 == workout_type.get_untracked()
+                                                                        selected=move || item.0 == workout_type.get_untracked()
                                                                     >
                                                                         {item.1}
                                                                     </option>
@@ -361,49 +378,50 @@ pub fn AddWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                 .iter()
                                                 .filter(|t| t.id.to_string() == workout_type.get())
                                                 .next()
-                                                .map(|t|t
-                                                .parameters
-                                                .iter()
-                                                .enumerate()
-                                                .map(|(i, p)| {
-                                                    let pp = p.clone();
-                                                    view! {
-                                                        {if i != 0 {
-                                                            view! { <div class="divider"></div> }.into_view()
-                                                        } else {
-                                                            view! {}.into_view()
-                                                        }}
+                                                .map(|t| {
+                                                    t.parameters
+                                                        .iter()
+                                                        .enumerate()
+                                                        .map(|(i, p)| {
+                                                            let pp = p.clone();
+                                                            view! {
+                                                                {if i != 0 {
+                                                                    view! { <div class="divider"></div> }.into_view()
+                                                                } else {
+                                                                    view! {}.into_view()
+                                                                }}
 
-                                                        <div class="field is-grouped">
-                                                            <p class="control is-vcentered">{p.name.clone()}</p>
-                                                            <p class="control is-vcentered">
-                                                                <input
-                                                                    class="input"
-                                                                    type="number"
-                                                                    name=format!("param[{}][value]", i)
-                                                                    value=p.value
-                                                                    on:input=move |ev| {
-                                                                        parameter_override
-                                                                            .update(|h| {
-                                                                                let val = event_target_value(&ev).parse();
-                                                                                if let Ok(val) = val {
-                                                                                    h.entry(pp.id).and_modify(|v| *v = val).or_insert(val);
-                                                                                }
-                                                                            })
-                                                                    }
-                                                                />
+                                                                <div class="field is-grouped">
+                                                                    <p class="control is-vcentered">{p.name.clone()}</p>
+                                                                    <p class="control is-vcentered">
+                                                                        <input
+                                                                            class="input"
+                                                                            type="number"
+                                                                            name=format!("param[{}][value]", i)
+                                                                            value=p.value
+                                                                            on:input=move |ev| {
+                                                                                parameter_override
+                                                                                    .update(|h| {
+                                                                                        let val = event_target_value(&ev).parse();
+                                                                                        if let Ok(val) = val {
+                                                                                            h.entry(pp.id).and_modify(|v| *v = val).or_insert(val);
+                                                                                        }
+                                                                                    })
+                                                                            }
+                                                                        />
 
-                                                            </p>
-                                                            <p class="control is-vcentered">
-                                                                {p.parameter_type.clone()}
-                                                            </p>
-                                                            <p class="control is-vcentered">
-                                                                {if p.scaling { "scaling" } else { "" }}
-                                                            </p>
-                                                        </div>
-                                                    }
+                                                                    </p>
+                                                                    <p class="control is-vcentered">
+                                                                        {p.parameter_type.clone()}
+                                                                    </p>
+                                                                    <p class="control is-vcentered">
+                                                                        {if p.scaling { "scaling" } else { "" }}
+                                                                    </p>
+                                                                </div>
+                                                            }
+                                                        })
+                                                        .collect_view()
                                                 })
-                                                .collect_view())
                                         }}
 
                                     </Show>
