@@ -16,7 +16,12 @@ pub async fn file_and_error_handler(
     req: Request<Body>,
 ) -> AxumResponse {
     let root = options.site_root.clone();
-    let res = get_static_file(uri.clone(), &root).await.unwrap();
+    let encoding = req
+        .headers()
+        .get("accept-encoding")
+        .map(|h| h.to_str().unwrap_or("none"))
+        .unwrap_or("none");
+    let res = get_static_file(uri.clone(), &root, encoding).await.unwrap();
 
     if res.status() == StatusCode::OK {
         res.into_response()
@@ -26,14 +31,24 @@ pub async fn file_and_error_handler(
     }
 }
 
-async fn get_static_file(uri: Uri, root: &str) -> Result<Response<Body>, (StatusCode, String)> {
+async fn get_static_file(
+    uri: Uri,
+    root: &str,
+    encoding: &str,
+) -> Result<Response<Body>, (StatusCode, String)> {
     let req = Request::builder()
         .uri(uri.clone())
+        .header("Accept-Encoding", encoding)
         .body(Body::empty())
         .unwrap();
     // `ServeDir` implements `tower::Service` so we can call it with `tower::ServiceExt::oneshot`
     // This path is relative to the cargo root
-    match ServeDir::new(root).oneshot(req).await {
+    match ServeDir::new(root)
+        .precompressed_gzip()
+        .precompressed_br()
+        .oneshot(req)
+        .await
+    {
         Ok(res) => Ok(res.into_response()),
         Err(err) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,

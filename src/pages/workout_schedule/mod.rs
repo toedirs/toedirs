@@ -4,11 +4,9 @@ use std::{
     iter,
 };
 
+use self::{add_template_dialog::CreateWorkoutDialog, add_workout_dialog::AddWorkoutDialog};
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use crate::workout_schedule::{
-    add_template_dialog::CreateWorkoutDialog, add_workout_dialog::AddWorkoutDialog,
-};
 use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, Weekday};
 #[cfg(feature = "ssr")]
 use chrono::{IsoWeek, TimeZone};

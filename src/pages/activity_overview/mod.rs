@@ -2,10 +2,8 @@ use std::time::Duration;
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
-use crate::{
-    activity_overview::activity_details::ActivityDetails, app::FitFileUploaded,
-    error_template::ErrorTemplate,
-};
+use crate::{app::FitFileUploaded, error_template::ErrorTemplate};
+use activity_details::ActivityDetails;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{DateTime, Local};
 use humantime::format_duration;

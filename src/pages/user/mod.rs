@@ -1,8 +1,8 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 #[cfg(feature = "ssr")]
-use crate::models::get_user_preferences;
-use crate::models::UserPreferences;
+use crate::models::user_preferences::get_user_preferences;
+use crate::models::user_preferences::UserPreferences;
 #[cfg(feature = "ssr")]
 use chrono::Local;
 #[cfg(feature = "ssr")]
@@ -157,12 +157,13 @@ pub fn UserSettings(show: RwSignal<bool>) -> impl IntoView {
     let max_heartrate = create_rw_signal(180);
     let update_user_preferences = create_server_action::<UpdateUserPreferences>();
     spawn_local(async move {
-        let preferences = get_preferences()
-            .await
-            .expect("can't load user preferences");
-        aerobic_threshold.set(preferences.aerobic_threshold as u32);
-        anaerobic_threshold.set(preferences.anaerobic_threshold as u32);
-        max_heartrate.set(preferences.max_heartrate as u32);
+        let preferences = get_preferences().await;
+
+        if let Ok(preferences) = preferences {
+            aerobic_threshold.set(preferences.aerobic_threshold as u32);
+            anaerobic_threshold.set(preferences.anaerobic_threshold as u32);
+            max_heartrate.set(preferences.max_heartrate as u32);
+        }
     });
     view! {
         <Show when=move || { show() } fallback=|| {}>

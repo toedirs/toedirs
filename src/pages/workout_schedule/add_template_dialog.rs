@@ -11,7 +11,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{DragEvent, HtmlElement};
 
 #[cfg(feature = "ssr")]
-use crate::workout_schedule::WorkoutType;
+use super::WorkoutType;
 
 #[derive(Clone, Debug)]
 pub struct Parameter {

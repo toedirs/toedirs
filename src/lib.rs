@@ -1,18 +1,13 @@
 use cfg_if::cfg_if;
-pub mod activity_overview;
 pub mod app;
 pub mod auth;
 pub mod config;
 pub mod error_template;
 #[cfg(feature = "ssr")]
 pub mod fileserv;
-pub mod fit_upload;
-pub mod heartrate_summary_chart;
 pub mod models;
+pub mod pages;
 pub mod state;
-pub mod training_load_chart;
-pub mod user;
-pub mod workout_schedule;
 
 cfg_if! { if #[cfg(feature = "hydrate")] {
     use leptos::*;

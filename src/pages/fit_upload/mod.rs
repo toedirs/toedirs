@@ -19,14 +19,17 @@ use sqlx::PgPool;
 use crate::app::FitFileUploaded;
 
 #[cfg(feature = "ssr")]
-use super::auth::User;
+use crate::auth::User;
 #[cfg(feature = "ssr")]
-use super::models::{
-    insert_activity, insert_laps, insert_records, insert_sessions, Activity, DatabaseEntry, Lap,
-    New, Record, Session,
+use crate::models::{
+    activity::{insert_activity, Activity},
+    base::{DatabaseEntry, New},
+    lap::{insert_laps, Lap},
+    record::{insert_records, Record},
+    session::{insert_sessions, Session},
 };
 #[cfg(feature = "ssr")]
-use super::state::AppState;
+use crate::state::AppState;
 #[cfg(feature = "ssr")]
 use axum_session_auth::{AuthSession, SessionPgPool};
 
@@ -53,7 +56,7 @@ pub async fn upload_fit_file(
 
 #[cfg(feature = "ssr")]
 async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Result<()> {
-    use crate::models::get_user_preferences;
+    use crate::models::user_preferences::get_user_preferences;
 
     let mut records: Vec<DatabaseEntry<New, Record>> = Vec::new();
     let mut sessions: Vec<DatabaseEntry<New, Session>> = Vec::new();
