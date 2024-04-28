@@ -15,7 +15,7 @@ COPY Cargo.toml .
 RUN mkdir src \
     && echo "fn main() {print!(\"Dummy main\");} // dummy file" > src/main.rs \
 	&& touch src/lib.rs
-RUN set -x && cargo build --target x86_64-unknown-linux-musl --release --precompress
+RUN set -x && cargo build --target x86_64-unknown-linux-musl --release
 RUN ["/bin/bash", "-c", "set -x && rm target/x86_64-unknown-linux-musl/release/deps/${BINARY_NAME//-/_}*"]
 
 COPY public ./public
@@ -23,7 +23,7 @@ COPY migrations ./migrations
 COPY .sqlx ./.sqlx
 COPY style ./style
 COPY src ./src
-RUN set -x && cargo leptos build --release 
+RUN set -x && cargo leptos build --release  --precompress
 RUN mkdir -p /build-out
 RUN set -x && cp target/x86_64-unknown-linux-musl/release/$BINARY_NAME /build-out/ \
     && cp -r target/site/ /build-out/site
