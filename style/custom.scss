@@ -197,6 +197,8 @@ main {
   z-index: 999;
   display: flex;
   align-items: start;
+  top: 60px;
+  left: 100px;
 
   .tooltip {
     background: white;

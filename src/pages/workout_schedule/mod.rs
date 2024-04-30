@@ -224,14 +224,12 @@ pub fn WorkoutDay(
                                                             {e.name.clone()}
                                                         </span>
                                                         <div class="level-right">
-                                                            <span class="icon">
-                                                                <i
-                                                                    class="material-symbols-rounded"
-                                                                    on:mouseover=move |_| show_info.set(true)
-                                                                    on:mouseout=move |_| show_info.set(false)
-                                                                >
-                                                                    info
-                                                                </i>
+                                                            <span
+                                                                class="icon"
+                                                                on:mouseenter=move |_| show_info.set(true)
+                                                                on:mouseout=move |_| show_info.set(false)
+                                                            >
+                                                                <i class="material-symbols-rounded">info</i>
                                                             </span>
                                                             <div class="dropdown is-hoverable">
                                                                 <div class="dropdown-trigger">
