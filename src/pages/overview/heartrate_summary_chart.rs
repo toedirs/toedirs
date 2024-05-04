@@ -1,16 +1,23 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
 use crate::{app::FitFileUploaded, error_template::ErrorTemplate};
+use charming::{
+    component::{Grid, Legend},
+    datatype::DataPointItem,
+    df,
+    element::{ItemStyle, Orient, Tooltip, Trigger},
+    series::Pie,
+    Chart, WasmRenderer,
+};
 #[cfg(feature = "ssr")]
 use chrono::Duration;
 use chrono::{DateTime, Local};
 use leptos::*;
-use leptos_charts::{Color, Gradient, PieChart, PieChartOptions, Series};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HeartrateSummary {
     pub zone1: Option<i64>,
     pub zone2: Option<i64>,
@@ -75,45 +82,37 @@ pub fn HeartrateSummaryChart(
         move || (from(), to(), uploaded.0()),
         move |(from, to, _)| heartrate_zone_summary_action(from, to),
     );
+    let _chart = create_local_resource(
+        move || zone_summary.get(),
+        move |zone_summary| async {
+            if let Some(Ok(zone_summary)) = zone_summary {
+                let chart = Chart::new()
+                    .grid(Grid::new().top(10).bottom(10))
+                    .legend(Legend::new().orient(Orient::Vertical).left("left"))
+                    .tooltip(Tooltip::new().trigger(Trigger::Item))
+                    .series(Pie::new().radius("75%").data(df!(
+                        DataPointItem::new(zone_summary.zone1.unwrap_or(0))
+                            .name("Zone 1")
+                            .item_style(ItemStyle::new().color("#a6da95")),
+                        DataPointItem::new(zone_summary.zone2.unwrap_or(0))
+                            .name( "Zone 2")
+                            .item_style(ItemStyle::new().color("#eed49f")),
+                        DataPointItem::new(zone_summary.zone3.unwrap_or(0))
+                            .name( "Zone 3")
+                            .item_style(ItemStyle::new().color("#ed8796")),
+                    )));
+                let renderer = WasmRenderer::new(620, 155);
+                let _rendered = renderer.render("heartrate_summary_chart", &chart).unwrap();
+            }
+        },
+    );
 
     view! {
         <Transition fallback=move || view! { <p>"Loading..."</p> }>
             <ErrorBoundary fallback=|errors| {
                 view! { <ErrorTemplate errors=errors/> }
             }>
-                {move || {
-                    zone_summary
-                        .get()
-                        .map(move |zone_summary| match zone_summary {
-                            Err(e) => {
-                                view! { <pre class="error">"Error: " {e.to_string()}</pre> }
-                                    .into_view()
-                            }
-                            Ok(zone_summary) => {
-                                let data: Series<i64> = vec![
-                                    (zone_summary.zone1.unwrap_or(0), "Zone 1".to_string()),
-                                    (zone_summary.zone2.unwrap_or(0), "Zone 2".to_string()),
-                                    (zone_summary.zone3.unwrap_or(0), "Zone 3".to_string()),
-                                ]
-                                    .into();
-                                let options: Box<PieChartOptions> = Box::new(PieChartOptions {
-                                    color: Box::new(Gradient {
-                                        from: Color::RGB(0, 255, 0),
-                                        to: Color::RGB(255, 0, 0),
-                                    }),
-                                });
-                                view! {
-                                    <PieChart
-                                        values=data.into()
-                                        options=options
-                                        attr:width="100%"
-                                        attr:height="100%"
-                                    />
-                                }
-                                    .into_view()
-                            }
-                        })
-                }}
+                <div id="heartrate_summary_chart"></div>
 
             </ErrorBoundary>
         </Transition>

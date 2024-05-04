@@ -1,13 +1,21 @@
+use std::cmp;
 use std::time::Duration;
 
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
+use crate::pages::user::get_preferences;
 use bigdecimal::{BigDecimal, ToPrimitive};
+use charming::{
+    component::{Axis, Grid, VisualMap, VisualMapPiece, VisualMapType},
+    element::{AxisType, MarkLine, MarkLineData, MarkLineVariant, Symbol, Tooltip, Trigger},
+    series::Line,
+    Chart, WasmRenderer,
+};
 use chrono::{DateTime, Local};
 use humantime::format_duration;
-use leptos::*;
-use leptos_charts::{Color, Gradient, LineChart, LineChartOptions};
+use leptos::{html::Div, *};
 use leptos_leaflet::*;
+use leptos_use::{use_element_size, UseElementSizeReturn};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::*;
@@ -48,6 +56,12 @@ pub struct ActivityDetail {
     pub sport: String,
     pub laps: Option<Vec<Lap>>,
     pub records: Vec<Record>,
+}
+
+impl PartialEq for ActivityDetail {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 #[server]
@@ -126,6 +140,96 @@ pub fn ActivityDetails(activity: RwSignal<Option<i64>>) -> impl IntoView {
             None
         }
     });
+    let user_prefs = create_resource(move || (), |_| async move { get_preferences().await });
+    let heartrate_chart_node = create_node_ref::<Div>();
+    let UseElementSizeReturn { width, height: _ } = use_element_size(heartrate_chart_node);
+    let _chart = create_local_resource(
+        move || (detail.get(), user_prefs.get(), width.get()),
+        move |(detail, user_prefs, width)| async move {
+            if width == 0.0 {
+                return;
+            }
+            let (aerobic, anaerobic, max_hr) = if let Some(Ok(prefs)) = user_prefs {
+                (
+                    prefs.aerobic_threshold,
+                    prefs.anaerobic_threshold,
+                    prefs.max_heartrate,
+                )
+            } else {
+                (155, 173, 183)
+            };
+            if let Some(Some(detail)) = detail {
+                let (timestamps, heartrates) = detail
+                    .records
+                    .iter()
+                    .filter_map(|r| {
+                        r.heartrate.map(|h| {
+                            (
+                                format!("{}", r.timestamp.format("%Y-%m-%d %H:%M:%S")),
+                                h as i32,
+                            )
+                        })
+                    })
+                    .unzip();
+                let chart = Chart::new()
+                    .grid(Grid::new().top(10).bottom(20))
+                    .tooltip(Tooltip::new().trigger(Trigger::Axis))
+                    .x_axis(Axis::new().type_(AxisType::Category).data(timestamps))
+                    .visual_map(
+                        VisualMap::new()
+                            .show(false)
+                            .type_(VisualMapType::Piecewise)
+                            .min(0)
+                            .max(183)
+                            .pieces(vec![
+                                VisualMapPiece::new()
+                                    .gt(0)
+                                    .lte(aerobic as f32 * 0.7)
+                                    .color("#7dc4e4"),
+                                VisualMapPiece::new()
+                                    .gt(aerobic as f32 * 0.7)
+                                    .lte(aerobic)
+                                    .color("#a6da95"),
+                                VisualMapPiece::new()
+                                    .gt(aerobic)
+                                    .lte(anaerobic)
+                                    .color("#eed49f"),
+                                VisualMapPiece::new()
+                                    .gt(anaerobic)
+                                    .lte(max_hr)
+                                    .color("#ed8796"),
+                            ]),
+                    )
+                    .y_axis(Axis::new().type_(AxisType::Value).min("dataMin"))
+                    .series(
+                        Line::new().show_symbol(false).data(heartrates).mark_line(
+                            MarkLine::new()
+                                .symbol(vec![Symbol::None, Symbol::None])
+                                .data(vec![
+                                    MarkLineVariant::Simple(
+                                        MarkLineData::new().y_axis(aerobic as f32 * 0.7).name(""),
+                                    ),
+                                    MarkLineVariant::Simple(
+                                        MarkLineData::new()
+                                            .y_axis(aerobic)
+                                            .name("Aerobic Threshold"),
+                                    ),
+                                    MarkLineVariant::Simple(
+                                        MarkLineData::new()
+                                            .y_axis(anaerobic)
+                                            .name("Anaerobic Threshold"),
+                                    ),
+                                    MarkLineVariant::Simple(
+                                        MarkLineData::new().y_axis(max_hr).name("Max Heartrate"),
+                                    ),
+                                ]),
+                        ),
+                    );
+                let renderer = WasmRenderer::new(cmp::max(width as u32, 500), 500);
+                let _rendered = renderer.render("heartrate_chart", &chart).unwrap();
+            }
+        },
+    );
     view! {
         <Show when=move || { activity().is_some() } fallback=|| {}>
 
@@ -140,13 +244,6 @@ pub fn ActivityDetails(activity: RwSignal<Option<i64>>) -> impl IntoView {
                             .map(|detail| match detail {
                                 None => view! { <pre>"Error"</pre> }.into_view(),
                                 Some(detail) => {
-                                    let data = detail
-                                        .records
-                                        .iter()
-                                        .filter_map(|r| {
-                                            r.heartrate.map(|h| (r.timestamp.timestamp(), h))
-                                        })
-                                        .collect::<Vec<(i64, i16)>>();
                                     view! {
                                         <div class="modal-card is-full">
                                             <div class="modal-card-head">
@@ -168,19 +265,8 @@ pub fn ActivityDetails(activity: RwSignal<Option<i64>>) -> impl IntoView {
                                             </div>
                                             <div class="modal-card-body">
                                                 <div class="columns">
-                                                    <div class="column">
-                                                        <LineChart
-                                                            values=data.into()
-                                                            options=Box::new(LineChartOptions {
-                                                                color: Box::new(Gradient {
-                                                                    from: Color::RGB(0, 255, 0),
-                                                                    to: Color::RGB(255, 0, 0),
-                                                                }),
-                                                                ..Default::default()
-                                                            })
-
-                                                            attr:style="width:100%;height:100%;min-height:500px;"
-                                                        />
+                                                    <div class="column" node_ref=heartrate_chart_node>
+                                                        <div id="heartrate_chart"></div>
 
                                                     </div>
 

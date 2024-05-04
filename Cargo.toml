@@ -32,7 +32,7 @@ leptos_axum = { version = "0.6.0", optional = true }
 leptos_charts = { git = "https://github.com/Panaetius/leptos_charts.git" }
 leptos_meta = { version = "0.6.0", features = ["nightly"] }
 leptos_router = { version = "0.6.0", features = ["nightly"] }
-leptos-use = { version = "0.10.1" }
+leptos-use = "0.10.1"
 leptos = { version = "0.6.0", features = ["nightly"] }
 log = "0.4"
 once_cell = { version = "1.18.0", optional = true }
@@ -68,6 +68,7 @@ varpro = "0.8.0"
 nalgebra = "0.32.5"
 
 proc-macro2 = "=1.0.79" #we don't depend on this directly, but since we can't currently update to current nightly, which is needed for newest proc-macro2
+charming = { version = "0.3.1", features = ["wasm"] }
 
 [features]
 hydrate = [

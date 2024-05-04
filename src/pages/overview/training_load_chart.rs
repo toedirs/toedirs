@@ -1,14 +1,19 @@
 #[cfg(feature = "ssr")]
 use crate::app::{auth, pool};
+use charming::{
+    component::{Axis, Grid},
+    element::{AxisType, Tooltip, Trigger},
+    series::Bar,
+    Chart, WasmRenderer,
+};
 #[cfg(feature = "ssr")]
 use chrono::Duration;
 use chrono::{DateTime, Local};
 use leptos::*;
-use leptos_charts::{BarChart, BarChartOptions};
 use serde::{Deserialize, Serialize};
 
 use crate::{app::FitFileUploaded, error_template::ErrorTemplate};
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrainingLoad {
     pub load: i64,
     pub date: DateTime<Local>,
@@ -88,40 +93,37 @@ pub fn TrainingLoadChart(
         move || (from(), to(), uploaded.0()),
         move |(from, to, _)| training_load_action(from, to),
     );
+    let _chart = create_local_resource(
+        move || training_load.get(),
+        move |load| async {
+            if let Some(Ok(training_load)) = load {
+                let chart = Chart::new()
+                    .grid(Grid::new().top(10).bottom(20))
+                    .tooltip(Tooltip::new().trigger(Trigger::Axis))
+                    .x_axis(
+                        Axis::new().type_(AxisType::Category).data(
+                            training_load
+                                .iter()
+                                .map(|t| format!("{}", t.date.format("%Y-%m-%d")))
+                                .collect::<Vec<_>>(),
+                        ),
+                    )
+                    .y_axis(Axis::new().type_(AxisType::Value))
+                    .series(
+                        Bar::new().data(training_load.iter().map(|t| t.load).collect::<Vec<_>>()),
+                    );
+                let renderer = WasmRenderer::new(620, 155);
+                let _rendered = renderer.render("training_load_chart", &chart).unwrap();
+            }
+        },
+    );
 
     view! {
         <Transition fallback=move || view! { <p>"Loading..."</p> }>
             <ErrorBoundary fallback=|errors| {
                 view! { <ErrorTemplate errors=errors/> }
             }>
-                {move || {
-                    training_load
-                        .get()
-                        .map(move |training_load| match training_load {
-                            Err(e) => {
-                                view! { <pre class="error">"Error: " {e.to_string()}</pre> }
-                                    .into_view()
-                            }
-                            Ok(training_load) => {
-                                let data: Vec<_> = training_load.iter().map(|t| t.load).collect();
-                                let options: Box<BarChartOptions> = Box::new(BarChartOptions {
-                                    max_ticks: 5,
-                                    ..Default::default()
-                                });
-                                view! {
-                                    // (t.load, t.date.format("%Y-%m-%d").to_string())).collect();
-
-                                    <BarChart
-                                        values=data.into()
-                                        options=options
-                                        attr:width="100%"
-                                        attr:height="100%"
-                                    />
-                                }
-                                    .into_view()
-                            }
-                        })
-                }}
+                <div id="training_load_chart"></div>
 
             </ErrorBoundary>
         </Transition>

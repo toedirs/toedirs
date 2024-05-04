@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UserPreferences {
     pub user_id: i64,
     pub start_time: Option<DateTime<Local>>,
