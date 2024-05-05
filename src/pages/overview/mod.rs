@@ -42,7 +42,7 @@ pub fn Overview() -> impl IntoView {
         })
     });
     view! {
-        <div class="container">
+        <div class="container is-fluid">
             <div class="columns">
                 <div class="column">
 
@@ -85,7 +85,7 @@ pub fn Overview() -> impl IntoView {
 
                 </div>
             </div>
-            <div class="columns is-variable is-1">
+            <div class="columns is-multiline is-variable is-1">
                 <div class="column is-full-mobile is-half-desktop is-one-third-fullhd">
                     <div class="card is-fullwidth">
                         <div class="card-header">

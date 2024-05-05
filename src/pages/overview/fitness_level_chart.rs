@@ -118,9 +118,24 @@ pub fn FitnessLevelChart(
                     .tooltip(Tooltip::new().trigger(Trigger::Axis))
                     .x_axis(Axis::new().type_(AxisType::Category).data(date))
                     .y_axis(Axis::new().type_(AxisType::Value))
-                    .series(Line::new().name("Fitness").data(historic_load))
-                    .series(Line::new().name("Acute Load").data(acute_load))
-                    .series(Line::new().name("Intensity").data(intensity));
+                    .series(
+                        Line::new()
+                            .name("Fitness")
+                            .show_symbol(false)
+                            .data(historic_load),
+                    )
+                    .series(
+                        Line::new()
+                            .name("Acute Load")
+                            .show_symbol(false)
+                            .data(acute_load),
+                    )
+                    .series(
+                        Line::new()
+                            .name("Intensity")
+                            .show_symbol(false)
+                            .data(intensity),
+                    );
                 let renderer = WasmRenderer::new(cmp::max(width as u32, 300), 155);
                 let _rendered = renderer.render("fitness_chart", &chart).unwrap();
             }
