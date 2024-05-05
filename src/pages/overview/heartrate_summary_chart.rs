@@ -12,10 +12,12 @@ use charming::{
 #[cfg(feature = "ssr")]
 use chrono::Duration;
 use chrono::{DateTime, Local};
-use leptos::*;
+use leptos::{html::Div, *};
+use leptos_use::{use_element_size, UseElementSizeReturn};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "ssr")]
 use sqlx::*;
+use std::cmp;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HeartrateSummary {
@@ -82,9 +84,11 @@ pub fn HeartrateSummaryChart(
         move || (from(), to(), uploaded.0()),
         move |(from, to, _)| heartrate_zone_summary_action(from, to),
     );
+    let heartrate_summary_chart = create_node_ref::<Div>();
+    let UseElementSizeReturn { width, height: _ } = use_element_size(heartrate_summary_chart);
     let _chart = create_local_resource(
-        move || zone_summary.get(),
-        move |zone_summary| async {
+        move || (zone_summary.get(), width()),
+        move |(zone_summary, width)| async move {
             if let Some(Ok(zone_summary)) = zone_summary {
                 let chart = Chart::new()
                     .grid(Grid::new().top(10).bottom(10))
@@ -101,7 +105,7 @@ pub fn HeartrateSummaryChart(
                             .name( "Zone 3")
                             .item_style(ItemStyle::new().color("#ed8796")),
                     )));
-                let renderer = WasmRenderer::new(620, 155);
+                let renderer = WasmRenderer::new(cmp::max(width as u32, 300), 155);
                 let _rendered = renderer.render("heartrate_summary_chart", &chart).unwrap();
             }
         },
@@ -112,7 +116,7 @@ pub fn HeartrateSummaryChart(
             <ErrorBoundary fallback=|errors| {
                 view! { <ErrorTemplate errors=errors/> }
             }>
-                <div id="heartrate_summary_chart"></div>
+                <div node_ref=heartrate_summary_chart id="heartrate_summary_chart"></div>
 
             </ErrorBoundary>
         </Transition>

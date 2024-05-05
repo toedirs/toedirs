@@ -9,8 +9,10 @@ use charming::{
 #[cfg(feature = "ssr")]
 use chrono::Duration;
 use chrono::{DateTime, Local};
-use leptos::*;
+use leptos::{html::Div, *};
+use leptos_use::{use_element_size, UseElementSizeReturn};
 use serde::{Deserialize, Serialize};
+use std::cmp;
 
 use crate::{app::FitFileUploaded, error_template::ErrorTemplate};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -93,9 +95,11 @@ pub fn TrainingLoadChart(
         move || (from(), to(), uploaded.0()),
         move |(from, to, _)| training_load_action(from, to),
     );
+    let trainingload_chart = create_node_ref::<Div>();
+    let UseElementSizeReturn { width, height: _ } = use_element_size(trainingload_chart);
     let _chart = create_local_resource(
-        move || training_load.get(),
-        move |load| async {
+        move || (training_load.get(), width()),
+        move |(load, width)| async move {
             if let Some(Ok(training_load)) = load {
                 let chart = Chart::new()
                     .grid(Grid::new().top(10).bottom(20))
@@ -112,7 +116,7 @@ pub fn TrainingLoadChart(
                     .series(
                         Bar::new().data(training_load.iter().map(|t| t.load).collect::<Vec<_>>()),
                     );
-                let renderer = WasmRenderer::new(620, 155);
+                let renderer = WasmRenderer::new(cmp::max(width as u32, 300), 155);
                 let _rendered = renderer.render("training_load_chart", &chart).unwrap();
             }
         },
@@ -123,7 +127,7 @@ pub fn TrainingLoadChart(
             <ErrorBoundary fallback=|errors| {
                 view! { <ErrorTemplate errors=errors/> }
             }>
-                <div id="training_load_chart"></div>
+                <div node_ref=trainingload_chart id="training_load_chart"></div>
 
             </ErrorBoundary>
         </Transition>

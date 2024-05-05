@@ -84,7 +84,7 @@ pub fn Overview() -> impl IntoView {
                 </div>
             </div>
             <div class="columns is-variable is-1">
-                <div class="column is-flex">
+                <div class="column is-full-mobile is-half-desktop is-one-third-fullhd">
                     <div class="card is-fullwidth">
                         <div class="card-header">
                             <p class="card-header-title">Hearrate Zones</p>
@@ -96,7 +96,7 @@ pub fn Overview() -> impl IntoView {
                         </div>
                     </div>
                 </div>
-                <div class="column is-flex">
+                <div class="column is-full-mobile is-half-desktop is-one-third-fullhd">
                     <div class="card is-fullwidth">
                         <div class="card-header">
                             <p class="card-header-title">Training LoadChart</p>
