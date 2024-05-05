@@ -19,7 +19,7 @@ use sqlx::PgPool;
 use crate::app::FitFileUploaded;
 
 #[cfg(feature = "ssr")]
-use crate::auth::User;
+use crate::authentication::User;
 #[cfg(feature = "ssr")]
 use crate::models::{
     activity::{insert_activity, Activity},

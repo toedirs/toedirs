@@ -1,5 +1,5 @@
 use crate::{
-    auth,
+    authentication,
     error_template::{AppError, ErrorTemplate},
     pages::{
         activity_overview::ActivityList,
@@ -25,8 +25,8 @@ if #[cfg(feature = "ssr")] {
                 .ok_or_else(|| ServerFnError::new("Pool missing."))
         }
 
-        pub fn auth() -> Result<auth::AuthSession, ServerFnError> {
-            use_context::<auth::AuthSession>()
+        pub fn auth() -> Result<authentication::AuthSession, ServerFnError> {
+            use_context::<authentication::AuthSession>()
                 .ok_or_else(|| ServerFnError::new("Auth session missing."))
         }
     }
@@ -41,9 +41,9 @@ pub fn App() -> impl IntoView {
     provide_context(FitFileUploaded(uploaded));
     let (show_upload, set_show_upload) = create_signal(false);
     let show_settings = create_rw_signal(false);
-    let login = create_server_action::<auth::Login>();
-    let logout = create_server_action::<auth::Logout>();
-    let signup = create_server_action::<auth::Signup>();
+    let login = create_server_action::<authentication::Login>();
+    let logout = create_server_action::<authentication::Logout>();
+    let signup = create_server_action::<authentication::Signup>();
     let user = create_blocking_resource(
         move || {
             (
@@ -53,7 +53,7 @@ pub fn App() -> impl IntoView {
             )
         },
         move |_| async move {
-            let user = auth::get_user().await.unwrap_or(None);
+            let user = authentication::get_user().await.unwrap_or(None);
             user.is_some()
         },
     );

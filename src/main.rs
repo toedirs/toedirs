@@ -6,7 +6,7 @@ cfg_if! {
         use leptos::*;
         use leptos_axum::{generate_route_list, LeptosRoutes, handle_server_fns_with_context};
         use toedirs::app::*;
-        use toedirs::auth::*;
+        use toedirs::authentication::*;
         use toedirs::pages::fit_upload::upload_fit_file;
         use toedirs::state::AppState;
         use toedirs::config::Config;

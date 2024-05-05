@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                SUM(a.load) as \"load!\",\n                a.date as \"date!\"\n            FROM (\n                SELECT \n                    COALESCE(activities.load, 0) as load,\n                    d.dt as date\n                FROM\n                (\n                    SELECT \n                        dt\n                    FROM\n                        generate_series(\n                            (SELECT date_trunc('day', MIN(a.start_time)) from activities a WHERE a.user_id=$1::bigint),\n                            (SELECT date_trunc('day', MAX(a.start_time)) from activities a WHERE a.user_id=$1::bigint),\n                            '1 day') dt\n                ) d\n                \n                LEFT JOIN activities on date_trunc('day',activities.start_time) = d.dt AND activities.user_id=$1::bigint\n             ) a\n            \n            GROUP BY a.date\n            ORDER BY a.date ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "load!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "date!",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "36358613061892d018a30bdb912ce8c8b4da9f810f0c3d5ea6ab971788cd2f8e"
+}

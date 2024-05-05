@@ -29,7 +29,6 @@ futures-util = { version = "0.3.28", optional = true }
 http = "1"
 itertools = "0.11.0"
 leptos_axum = { version = "0.6.0", optional = true }
-leptos_charts = { git = "https://github.com/Panaetius/leptos_charts.git" }
 leptos_meta = { version = "0.6.0", features = ["nightly"] }
 leptos_router = { version = "0.6.0", features = ["nightly"] }
 leptos-use = "0.10.1"
@@ -75,7 +74,6 @@ hydrate = [
   "leptos/hydrate",
   "leptos_meta/hydrate",
   "leptos_router/hydrate",
-  "leptos_charts/hydrate",
   "leptos-leaflet/hydrate",
 ]
 ssr = [
@@ -87,7 +85,6 @@ ssr = [
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
-  "leptos_charts/ssr",
   "dep:tracing",
   "dep:futures-util",
   "dep:sqlx",

@@ -1,6 +1,6 @@
 use cfg_if::cfg_if;
 pub mod app;
-pub mod auth;
+pub mod authentication;
 pub mod config;
 pub mod error_template;
 #[cfg(feature = "ssr")]
