@@ -1,7 +1,9 @@
+mod fitness_level_chart;
 mod heartrate_summary_chart;
 mod training_load_chart;
 
 use chrono::{Duration, Local, NaiveDate, TimeZone};
+use fitness_level_chart::FitnessLevelChart;
 use heartrate_summary_chart::HeartrateSummaryChart;
 use leptos::*;
 use training_load_chart::TrainingLoadChart;
@@ -99,10 +101,20 @@ pub fn Overview() -> impl IntoView {
                 <div class="column is-full-mobile is-half-desktop is-one-third-fullhd">
                     <div class="card is-fullwidth">
                         <div class="card-header">
-                            <p class="card-header-title">Training LoadChart</p>
+                            <p class="card-header-title">Training Load</p>
                         </div>
                         <div class="card-content ">
                             <TrainingLoadChart from=from_memo to=to_memo/>
+                        </div>
+                    </div>
+                </div>
+                <div class="column is-full-mobile is-half-desktop is-one-third-fullhd">
+                    <div class="card is-fullwidth">
+                        <div class="card-header">
+                            <p class="card-header-title">Fitness Level</p>
+                        </div>
+                        <div class="card-content ">
+                            <FitnessLevelChart from=from_memo to=to_memo/>
                         </div>
                     </div>
                 </div>
