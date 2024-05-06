@@ -1654,6 +1654,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "leptos-chartistry"
+version = "0.1.5"
+source = "git+https://github.com/feral-dot-io/leptos-chartistry.git#f46d8220642d0b9d46f4ae7d9c63560bf54ee065"
+dependencies = [
+ "chrono",
+ "leptos",
+ "leptos-use",
+ "log",
+ "web-sys",
+]
+
+[[package]]
 name = "leptos-leaflet"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3889,6 +3901,7 @@ dependencies = [
  "humantime",
  "itertools 0.11.0",
  "leptos",
+ "leptos-chartistry",
  "leptos-leaflet",
  "leptos-use",
  "leptos_axum",

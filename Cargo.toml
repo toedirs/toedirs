@@ -68,6 +68,7 @@ nalgebra = "0.32.5"
 
 proc-macro2 = "=1.0.79" #we don't depend on this directly, but since we can't currently update to current nightly, which is needed for newest proc-macro2
 charming = { version = "0.3.1", features = ["wasm"] }
+leptos-chartistry = {git = "https://github.com/feral-dot-io/leptos-chartistry.git"}
 
 [features]
 hydrate = [
