@@ -6,7 +6,7 @@ use charming::{
     series::Line,
     Chart, WasmRenderer,
 };
-use chrono::{DateTime, Duration, Local};
+use chrono::{DateTime, Days, Duration, Local};
 use itertools::MultiUnzip;
 use leptos::{html::Div, *};
 use leptos_use::{use_element_size, UseElementSizeReturn};
@@ -23,6 +23,7 @@ pub struct TrainingLoad {
 #[cfg(feature = "ssr")]
 pub async fn daily_training_load(
     user_id: i64,
+    to: DateTime<Local>,
     executor: sqlx::PgPool,
 ) -> Result<Vec<TrainingLoad>, sqlx::Error> {
     let result: Vec<TrainingLoad> = sqlx::query_as!(
@@ -42,7 +43,7 @@ pub async fn daily_training_load(
                     FROM
                         generate_series(
                             (SELECT date_trunc('day', MIN(a.start_time)) from activities a WHERE a.user_id=$1::bigint),
-                            (SELECT date_trunc('day', MAX(a.start_time)) from activities a WHERE a.user_id=$1::bigint),
+                            date_trunc('day', $2::timestamptz) + interval '1' day,
                             '1 day') dt
                 ) d
                 
@@ -54,6 +55,7 @@ pub async fn daily_training_load(
             "#
 ,
         &user_id,
+        &to
     )
     .fetch_all(&executor)
     .await?;
@@ -61,14 +63,16 @@ pub async fn daily_training_load(
 }
 
 #[server]
-pub async fn daily_training_load_action() -> Result<Vec<TrainingLoad>, ServerFnError> {
+pub async fn daily_training_load_action(
+    to: Option<DateTime<Local>>,
+) -> Result<Vec<TrainingLoad>, ServerFnError> {
     let auth = auth()?;
     if auth.current_user.is_none() {
         return Err(ServerFnError::new("Not logged in".to_string()));
     }
     let user = auth.current_user.expect("the user to be logged in");
     let pool = pool()?;
-    let summary = daily_training_load(user.id, pool).await?;
+    let summary = daily_training_load(user.id, to.unwrap_or(Local::now()), pool).await?;
     Ok(summary)
 }
 
@@ -78,8 +82,10 @@ pub fn FitnessLevelChart(
     #[prop(into)] to: Memo<Option<DateTime<Local>>>,
 ) -> impl IntoView {
     let uploaded = use_context::<FitFileUploaded>().unwrap();
-    let training_load =
-        create_resource(move || uploaded.0(), move |_| daily_training_load_action());
+    let training_load = create_resource(
+        move || (to.get(), uploaded.0()),
+        move |(to, _)| daily_training_load_action(to),
+    );
     let fitness_chart = create_node_ref::<Div>();
     let UseElementSizeReturn { width, height: _ } = use_element_size(fitness_chart);
     let _chart = create_local_resource(
@@ -87,7 +93,10 @@ pub fn FitnessLevelChart(
         move |(from, to, training_load, width)| async move {
             if let Some(Ok(training_load)) = training_load {
                 let from = from.unwrap_or(Local::now() - Duration::try_days(120).unwrap());
-                let to = to.unwrap_or(Local::now());
+                let to = to
+                    .unwrap_or(Local::now())
+                    .checked_add_days(Days::new(2))
+                    .unwrap();
                 let moving_average_historic = consts::E.powf(-1.0 / 42.0); //moving average for last 42 days
                 let moving_average_acute = consts::E.powf(-1.0 / 7.0); //moving average for last 7 days
                 let (date, historic_load, acute_load, intensity): (Vec<_>, Vec<_>, Vec<_>, Vec<_>) =
