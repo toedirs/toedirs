@@ -137,7 +137,7 @@ pub fn FitnessLevelChart(
                             .data(intensity),
                     );
                 let renderer = WasmRenderer::new(cmp::max(width as u32, 300), 155);
-                let _rendered = renderer.render("fitness_chart", &chart).unwrap();
+                let _rendered = renderer.render("fitness_chart", &chart);
             }
         },
     );

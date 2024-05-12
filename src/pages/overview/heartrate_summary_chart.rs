@@ -75,7 +75,7 @@ pub async fn heartrate_zone_summary_action(
 }
 
 #[component]
-pub fn HeartrateSummaryChart(
+pub fn HeartrateZoneSummaryChart(
     #[prop(into)] from: Memo<Option<DateTime<Local>>>,
     #[prop(into)] to: Memo<Option<DateTime<Local>>>,
 ) -> impl IntoView {
@@ -106,7 +106,7 @@ pub fn HeartrateSummaryChart(
                             .item_style(ItemStyle::new().color("#ed8796")),
                     )));
                 let renderer = WasmRenderer::new(cmp::max(width as u32, 300), 155);
-                let _rendered = renderer.render("heartrate_summary_chart", &chart).unwrap();
+                let _rendered = renderer.render("heartrate_summary_chart", &chart);
             }
         },
     );

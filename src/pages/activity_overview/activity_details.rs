@@ -180,7 +180,7 @@ pub fn ActivityDetails(activity: RwSignal<Option<i64>>) -> impl IntoView {
                             .show(false)
                             .type_(VisualMapType::Piecewise)
                             .min(0)
-                            .max(183)
+                            .max(max_hr)
                             .pieces(vec![
                                 VisualMapPiece::new()
                                     .gt(0)
@@ -226,7 +226,7 @@ pub fn ActivityDetails(activity: RwSignal<Option<i64>>) -> impl IntoView {
                         ),
                     );
                 let renderer = WasmRenderer::new(cmp::max(width as u32, 500), 500);
-                let _rendered = renderer.render("heartrate_chart", &chart).unwrap();
+                let _rendered = renderer.render("heartrate_chart", &chart);
             }
         },
     );

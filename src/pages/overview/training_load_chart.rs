@@ -117,7 +117,7 @@ pub fn TrainingLoadChart(
                         Bar::new().data(training_load.iter().map(|t| t.load).collect::<Vec<_>>()),
                     );
                 let renderer = WasmRenderer::new(cmp::max(width as u32, 300), 155);
-                let _rendered = renderer.render("training_load_chart", &chart).unwrap();
+                let _rendered = renderer.render("training_load_chart", &chart);
             }
         },
     );
