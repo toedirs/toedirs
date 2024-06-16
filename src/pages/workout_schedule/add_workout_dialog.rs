@@ -153,16 +153,16 @@ pub fn AddWorkoutDialog(
     show: RwSignal<bool>,
     #[prop(into)] on_save: Callback<()>,
 ) -> impl IntoView {
-    let workout_templates = create_resource(
-        move || show(),
-        |value| async move {
-            if value {
-                get_workout_templates().await.unwrap_or_default()
-            } else {
-                Vec::new()
-            }
-        },
-    );
+    let workout_templates = create_rw_signal(Vec::new());
+    create_effect(move |_| {
+        if show() {
+            spawn_local(async move {
+                let templates = get_workout_templates().await.unwrap_or(Vec::new());
+                workout_templates.set(templates);
+            });
+        }
+    });
+
     let workout_type = create_rw_signal("0".to_string());
     let parameter_override = create_rw_signal(HashMap::<i64, i32>::new());
     let start_date = create_rw_signal(Some(
@@ -253,7 +253,6 @@ pub fn AddWorkoutDialog(
         },
     );
     let add_workout_action = create_server_action::<AddWorkout>();
-    let close = move |_| show.set(false);
     create_effect(move |_| {
         // run callback if server action was run
         if let Some(_) = add_workout_action.value().get() {
@@ -301,11 +300,15 @@ pub fn AddWorkoutDialog(
             >
 
                 <div class=move || format!("modal {}", if show.get() { "is-active" } else { "" })>
-                    <div class="modal-background" on:click=close></div>
+                    <div class="modal-background" on:click=move |_| show.set(false)></div>
                     <div class="modal-card">
                         <div class="modal-card-head">
                             <p class="modal-card-title">"Add workout to calendar"</p>
-                            <button class="delete" aria-label="close" on:click=close></button>
+                            <button
+                                class="delete"
+                                aria-label="close"
+                                on:click=move |_| show.set(false)
+                            ></button>
                         </div>
                         <div class="modal-card-body">
                             <div class="field">
@@ -324,38 +327,35 @@ pub fn AddWorkoutDialog(
                                             >
 
                                                 {move || {
-                                                    workout_templates
-                                                        .get()
-                                                        .map(|templates| {
-                                                            let options = iter::once((
-                                                                    "0".to_string(),
-                                                                    "Choose workout template".to_string(),
-                                                                    true,
-                                                                ))
-                                                                .chain(
-                                                                    templates
-                                                                        .iter()
-                                                                        .map(|t| {
-                                                                            (format!("{}", t.id), t.template_name.clone(), false)
-                                                                        }),
-                                                                )
-                                                                .collect::<Vec<_>>();
-                                                            view! {
-                                                                <For
-                                                                    each=move || options.clone()
-                                                                    key=move |i| i.0.clone()
-                                                                    let:item
-                                                                >
-                                                                    <option
-                                                                        value=item.0.clone()
-                                                                        disabled=item.2
-                                                                        selected=move || item.0 == workout_type.get_untracked()
-                                                                    >
-                                                                        {item.1}
-                                                                    </option>
-                                                                </For>
-                                                            }
-                                                        })
+                                                    let options = iter::once((
+                                                            "0".to_string(),
+                                                            "Choose workout template".to_string(),
+                                                            true,
+                                                        ))
+                                                        .chain(
+                                                            workout_templates
+                                                                .get()
+                                                                .iter()
+                                                                .map(|t| {
+                                                                    (format!("{}", t.id), t.template_name.clone(), false)
+                                                                }),
+                                                        )
+                                                        .collect::<Vec<_>>();
+                                                    view! {
+                                                        <For
+                                                            each=move || options.clone()
+                                                            key=move |i| i.0.clone()
+                                                            let:item
+                                                        >
+                                                            <option
+                                                                value=item.0.clone()
+                                                                disabled=item.2
+                                                                selected=move || item.0 == workout_type.get_untracked()
+                                                            >
+                                                                {item.1}
+                                                            </option>
+                                                        </For>
+                                                    }
                                                 }}
 
                                             </select>
@@ -374,7 +374,6 @@ pub fn AddWorkoutDialog(
                                         {move || {
                                             workout_templates
                                                 .get()
-                                                .unwrap()
                                                 .iter()
                                                 .filter(|t| t.id.to_string() == workout_type.get())
                                                 .next()
@@ -762,7 +761,7 @@ pub fn AddWorkoutDialog(
                             </div>
                         </div>
                         <div class="modal-card-foot">
-                            <button class="button" on:click=close>
+                            <button class="button" on:click=move |_| show.set(false)>
                                 Cancel
                             </button>
                             <button type="submit" class="button is-success">
@@ -776,7 +775,7 @@ pub fn AddWorkoutDialog(
             <div
                 class="modal-overlay"
                 style="z-index: 1002; display: block; opacity: 0.5;"
-                on:click=move |_| { show.set(false) }
+                on:click=move |_| show.set(false)
             ></div>
         </Show>
     }
