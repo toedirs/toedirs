@@ -257,6 +257,23 @@ pub fn AddWorkoutDialog(
         // run callback if server action was run
         if let Some(_) = add_workout_action.value().get() {
             workout_type.set("0".to_string());
+            parameter_override.set(HashMap::<i64, i32>::new());
+            spawn_local(async move {
+                // if we don't do this in a local spawn, it breaks and only shows a white page, probably because the signals get disposed?
+                start_date.set(Some(
+                    Local::now().date_naive().format("%Y-%m-%d").to_string(),
+                ));
+                end_date.set(Some(
+                    Local::now().date_naive().format("%Y-%m-%d").to_string(),
+                ));
+                occurences.set(1);
+                end_type.set(EndType::Occurences);
+                repetition_type.set("weekly".to_string());
+                repetition_frequency.set(1);
+                repetition_on_day.set(HashSet::<String>::new());
+                month_day.set(1);
+            });
+
             show.set(false);
             on_save(());
         }
