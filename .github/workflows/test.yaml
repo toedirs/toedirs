@@ -44,11 +44,12 @@ jobs:
           targets: wasm32-unknown-unknown,x86_64-unknown-linux-gnu
       - name: install leptos
         run: cargo install --locked cargo-leptos
-      - name: enforce formatting
+      - name: run tests
         run: cargo leptos test      
   end2end:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    needs: [test]
     services:
       # Label used to access the service container
       postgres:
@@ -85,8 +86,8 @@ jobs:
         run: |
           npx playwright install --with-deps
           cd ..
-      - name: enforce formatting
-        run: cargo leptos test      
+      - name: run end2end tests
+        run: cargo leptos end-to-end      
       - uses: actions/upload-artifact@v4
         if: always()
         with:
