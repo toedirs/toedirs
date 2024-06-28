@@ -78,9 +78,13 @@ jobs:
         with:
           node-version: lts/*
       - name: Install dependencies
-        run: npm ci
+        run: |
+          cd end2end
+          npm ci
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: |
+          npx playwright install --with-deps
+          cd ..
       - name: enforce formatting
         run: cargo leptos test      
       - uses: actions/upload-artifact@v4
