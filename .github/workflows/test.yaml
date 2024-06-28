@@ -87,6 +87,8 @@ jobs:
           npx playwright install --with-deps
           cd ..
       - name: run end2end tests
+        env:
+          DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
         run: cargo leptos end-to-end      
       - uses: actions/upload-artifact@v4
         if: always()
