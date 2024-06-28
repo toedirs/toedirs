@@ -43,7 +43,11 @@ jobs:
           toolchain: nightly-2024-04-04
           targets: wasm32-unknown-unknown,x86_64-unknown-linux-gnu
       - name: install leptos
-        run: cargo install --locked cargo-leptos
+        run: |
+          cargo install --locked cargo-leptos
+          cargo install sqlx-cli
+      - name: test sqlx
+        run: cargo sqlx --check -- --all-targets --all-features
       - name: run tests
         run: cargo leptos test      
   end2end:
