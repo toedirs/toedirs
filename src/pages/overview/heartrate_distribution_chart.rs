@@ -140,7 +140,7 @@ pub fn HeartrateDistributionChart(
                                         ItemStyle::new().color(
                                             if d.heartrate < (aerobic as f32 * 0.7) as i32 {
                                                 "#7dc4e4"
-                                            } else if d.heartrate < aerobic as i32 {
+                                            } else if d.heartrate < aerobic {
                                                 "#a6da95"
                                             } else if d.heartrate < anaerobic {
                                                 "#eed49f"

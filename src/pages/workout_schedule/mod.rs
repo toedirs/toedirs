@@ -157,13 +157,13 @@ pub fn WorkoutDay(
     let delete_occurence = create_server_action::<DeleteWorkoutOccurence>();
     create_effect(move |_| {
         // run callback if server action was run
-        if let Some(_) = delete_instance.value().get() {
+        if delete_instance.value().get().is_some() {
             on_change(());
         }
     });
     create_effect(move |_| {
         // run callback if server action was run
-        if let Some(_) = delete_occurence.value().get() {
+        if delete_occurence.value().get().is_some() {
             on_change(());
         }
     });
@@ -273,7 +273,7 @@ pub fn WorkoutDay(
                                                                                     .dispatch(DeleteWorkoutOccurence {
                                                                                         instance_id: e.id,
                                                                                         week: week.week,
-                                                                                        day: day,
+                                                                                        day,
                                                                                     });
                                                                             }
                                                                         >
@@ -300,9 +300,7 @@ pub fn WorkoutDay(
                                                                                         <div class="column">
                                                                                             {match s.param_type.as_str() {
                                                                                                 "time_s" => {
-                                                                                                    format_duration(
-                                                                                                            std::time::Duration::new(s.value.clone() as _, 0),
-                                                                                                        )
+                                                                                                    format_duration(std::time::Duration::new(s.value as _, 0))
                                                                                                         .to_string()
                                                                                                 }
                                                                                                 _ => s.value.clone().to_string(),
@@ -627,11 +625,11 @@ impl WorkoutWeek {
         (
             self.week.0,
             self.week.1,
-            self.workouts.iter().map(|(_, v)| v.len()).sum(),
+            self.workouts.values().map(|v| v.len()).sum(),
             self.scaling,
             self.workouts
-                .iter()
-                .map(|(_, v)| {
+                .values()
+                .map(|v| {
                     v.iter()
                         .map(|e| e.steps.iter().map(|s| s.value as usize).sum::<usize>())
                         .sum::<usize>()
@@ -797,12 +795,10 @@ pub fn WorkoutCalendar() -> impl IntoView {
             .await;
             if let Some(new_week) = week_entries
                 .ok()
-                .and_then(|w| w.first().and_then(|f| Some(f.to_owned())))
+                .and_then(|w| w.first().map(|f| f.to_owned()))
             {
                 weeks.update(|v| {
-                    *v = iter::once(new_week)
-                        .chain((*v).iter().map(|x| x.clone()))
-                        .collect();
+                    *v = iter::once(new_week).chain((*v).iter().cloned()).collect();
                 });
                 if let Some(el) = calendar_list_el.get_untracked() {
                     el.set_scroll_top(150);
@@ -840,7 +836,7 @@ pub fn WorkoutCalendar() -> impl IntoView {
     };
     create_effect(move |_| {
         // run callback if server action was run
-        if let Some(_) = set_scaling.value().get() {
+        if set_scaling.value().get().is_some() {
             reload_calendar(());
         }
     });

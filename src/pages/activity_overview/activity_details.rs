@@ -279,7 +279,7 @@ pub fn ActivityDetails(activity: RwSignal<Option<i64>>) -> impl IntoView {
                                                             })
                                                             .collect();
                                                         match coordinates {
-                                                            Some(coordinates) if coordinates.len() > 0 => {
+                                                            Some(coordinates) if !coordinates.is_empty() => {
                                                                 let num_coords = coordinates.len();
                                                                 let center = coordinates
                                                                     .clone()

@@ -208,7 +208,7 @@ pub fn UserSettings(show: RwSignal<bool>) -> impl IntoView {
                                                 </div>
                                                 <div class="control">
                                                     <span class="tag is-medium is-info ml-2">
-                                                        {move || aerobic_threshold()}
+                                                        {aerobic_threshold}
                                                     </span>
                                                 </div>
                                             </div>
@@ -242,7 +242,7 @@ pub fn UserSettings(show: RwSignal<bool>) -> impl IntoView {
                                                 </div>
                                                 <div class="control">
                                                     <span class="tag is-medium is-warning ml-2">
-                                                        {move || anaerobic_threshold()}
+                                                        {anaerobic_threshold}
                                                     </span>
                                                 </div>
                                             </div>
@@ -276,7 +276,7 @@ pub fn UserSettings(show: RwSignal<bool>) -> impl IntoView {
                                                 </div>
                                                 <div class="control">
                                                     <span class="tag is-medium is-danger ml-2">
-                                                        {move || max_heartrate()}
+                                                        {max_heartrate}
                                                     </span>
                                                 </div>
                                             </div>

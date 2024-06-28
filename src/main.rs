@@ -19,6 +19,7 @@ cfg_if! {
     }
 }
 
+#[cfg(feature = "ssr")]
 async fn server_fn_handler(
     State(app_state): State<AppState>,
     auth_session: AuthSession,

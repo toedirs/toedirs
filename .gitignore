@@ -18,3 +18,11 @@ tailwindcss-linux-x64
 
 .helix/
 .cargo/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

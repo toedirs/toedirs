@@ -294,7 +294,7 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                     .unwrap()
                                                     .unwrap();
                                                 let cls_name = parent.class_name();
-                                                let mut cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                let mut cls = cls_name.split(' ').collect::<Vec<_>>();
                                                 if !cls.contains(&"drag-over") {
                                                     cls.push("drag-over");
                                                     if src_index > tgt_index {
@@ -316,14 +316,14 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                     .unwrap()
                                                     .unwrap();
                                                 let cls_name = parent.class_name();
-                                                let cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                let cls = cls_name.split(' ').collect::<Vec<_>>();
                                                 if cls.contains(&"drag-over") {
                                                     let cls_name = cls
                                                         .iter()
                                                         .filter(|&v| {
                                                             v != &"drag-over" && v != &"after" && v != &"before"
                                                         })
-                                                        .map(|v| *v)
+                                                        .copied()
                                                         .collect::<Vec<_>>()
                                                         .join(" ");
                                                     parent.set_class_name(cls_name.as_str());
@@ -346,14 +346,14 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                     .unwrap()
                                                     .unwrap();
                                                 let cls_name = parent.class_name();
-                                                let cls = cls_name.split(" ").collect::<Vec<_>>();
+                                                let cls = cls_name.split(' ').collect::<Vec<_>>();
                                                 if cls.contains(&"drag-over") {
                                                     let cls_name = cls
                                                         .iter()
                                                         .filter(|&v| {
                                                             v != &"drag-over" && v != &"before" && v != &"after"
                                                         })
-                                                        .map(|v| *v)
+                                                        .copied()
                                                         .collect::<Vec<_>>()
                                                         .join(" ");
                                                     parent.set_class_name(cls_name.as_str());
@@ -373,8 +373,8 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                                             .unwrap();
                                                         let el = v.remove(src_index);
                                                         v.insert(tgt_index, el);
-                                                        for i in 0..v.len() {
-                                                            v[i].order.set(i as u32);
+                                                        for (i, p) in v.iter().enumerate() {
+                                                            p.order.set(i as u32);
                                                         }
                                                     });
                                             }
@@ -388,7 +388,7 @@ pub fn CreateWorkoutDialog(show: RwSignal<bool>) -> impl IntoView {
                                     <a
                                         class="button"
                                         on:click=move |_| {
-                                            workout_parameter_index.update(|v| *v = *v + 1)
+                                            workout_parameter_index.update(|v| *v += 1)
                                         }
                                     >
 

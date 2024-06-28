@@ -255,7 +255,7 @@ pub fn AddWorkoutDialog(
     let add_workout_action = create_server_action::<AddWorkout>();
     create_effect(move |_| {
         // run callback if server action was run
-        if let Some(_) = add_workout_action.value().get() {
+        if add_workout_action.value().get().is_some() {
             workout_type.set("0".to_string());
             parameter_override.set(HashMap::<i64, i32>::new());
             spawn_local(async move {
@@ -300,7 +300,7 @@ pub fn AddWorkoutDialog(
                     add_workout_action
                         .dispatch(AddWorkout {
                             workout_type: workout_type.get_untracked().parse::<i32>().unwrap(),
-                            start_date: start_date,
+                            start_date,
                             rrule: repetition_rule.get().unwrap(),
                             param: Some(
                                 parameter_override
@@ -392,8 +392,7 @@ pub fn AddWorkoutDialog(
                                             workout_templates
                                                 .get()
                                                 .iter()
-                                                .filter(|t| t.id.to_string() == workout_type.get())
-                                                .next()
+                                                .find(|t| t.id.to_string() == workout_type.get())
                                                 .map(|t| {
                                                     t.parameters
                                                         .iter()
