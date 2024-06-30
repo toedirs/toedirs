@@ -12,12 +12,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        id: cache-cargo-leptosfmt
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-fmt
       - uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly-2024-04-04
           targets: wasm32-unknown-unknown,x86_64-unknown-linux-gnu
-      - name: install leptos
-        run: cargo install --locked leptosfmt 
+      - name: install leptosfmt
+        if: steps.cache-cargo-leptosfmt.outputs.cache-hit != 'true'
+        run: cargo install --force --locked leptosfmt 
       - name: enforce formatting
         run: leptosfmt --check src
   clippy:
@@ -25,6 +36,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        id: cache-cargo-clippy
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-clippy
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: clippy
@@ -38,14 +59,25 @@ jobs:
     needs: [fmt, clippy]
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        id: cache-cargo-test
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-test
       - uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly-2024-04-04
           targets: wasm32-unknown-unknown,x86_64-unknown-linux-gnu
       - name: install leptos
+        if: steps.cache-cargo-test.outputs.cache-hit != 'true'
         run: |
-          cargo install --locked cargo-leptos@0.2.16
-          cargo install --locked sqlx-cli@0.7.4
+          cargo install --force --locked cargo-leptos@0.2.16
+          cargo install --force --locked sqlx-cli@0.7.4
       - name: test sqlx
         run: cargo sqlx prepare --check -- --all-targets --all-features
       - name: run tests
@@ -61,6 +93,7 @@ jobs:
         image: postgres
         # Provide the password for postgres
         env:
+          POSTGRES_DB: toedi
           POSTGRES_PASSWORD: postgres
         # Set health checks to wait until postgres has started
         options: >-
@@ -73,30 +106,52 @@ jobs:
           - 5432:5432
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        id: cache-cargo-end2end
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-end2end
       - uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly-2024-04-04
           targets: wasm32-unknown-unknown,x86_64-unknown-linux-gnu
       - name: install leptos
-        run: cargo install --locked cargo-leptos@0.2.16
+        if: steps.cache-cargo-end2end.outputs.cache-hit != 'true'
+        run: |
+          cargo install --force --locked cargo-leptos@0.2.16
+          cargo install --force --locked sqlx-cli@0.7.4
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
       - name: Install dependencies
         run: |
-          cd end2end
           npm ci
+        working-directory: ./end2end
+        env:
+          CI: 'true'
       - name: Install Playwright Browsers
         run: |
           npx playwright install --with-deps
-          cd ..
+        working-directory: ./end2end
+        env:
+          CI: 'true'
+      - name: run migrations
+        run: sqlx migrate run
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/toedi
       - name: run end2end tests
         env:
-          DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
-        run: cargo leptos end-to-end      
+          DATABASE_URL: postgres://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/toedi
+          CI: 'true'
+        run: cargo leptos end-to-end --release    
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: end2end/playwright-report/
           retention-days: 30
