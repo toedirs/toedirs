@@ -1,3 +1,5 @@
+![Tests](https://github.com/toedirs/toedirs/actions/workflows/test.yaml/badge.svg)
+
 # Toedi fitness tracking platform
 
 Toedi is a self-hosted fitness tracking and workout planning app.
