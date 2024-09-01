@@ -1,6 +1,7 @@
 mod fitness_level_chart;
 mod heartrate_distribution_chart;
 mod heartrate_summary_chart;
+mod slope_speed_chart;
 mod training_load_chart;
 
 use chrono::{Duration, Local, NaiveDate, TimeZone};
@@ -9,6 +10,8 @@ use heartrate_distribution_chart::HeartrateDistributionChart;
 use heartrate_summary_chart::HeartrateZoneSummaryChart;
 use leptos::*;
 use training_load_chart::TrainingLoadChart;
+
+use slope_speed_chart::SlopeSpeedChart;
 #[component]
 pub fn Overview() -> impl IntoView {
     //overview page
@@ -127,6 +130,16 @@ pub fn Overview() -> impl IntoView {
                         </div>
                         <div class="card-content ">
                             <HeartrateDistributionChart from=from_memo to=to_memo/>
+                        </div>
+                    </div>
+                </div>
+                <div class="column is-full-mobile is-half-desktop is-one-third-fullhd">
+                    <div class="card is-fullwidth">
+                        <div class="card-header">
+                            <p class="card-header-title">Slope Speed</p>
+                        </div>
+                        <div class="card-content ">
+                            <SlopeSpeedChart from=from_memo to=to_memo/>
                         </div>
                     </div>
                 </div>

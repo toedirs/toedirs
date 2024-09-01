@@ -1,3 +1,5 @@
+#[cfg(feature = "ssr")]
+use itertools::Itertools;
 use std::time::Duration;
 
 #[cfg(feature = "ssr")]
@@ -27,11 +29,15 @@ use crate::models::{
     lap::{insert_laps, Lap},
     record::{insert_records, Record},
     session::{insert_sessions, Session},
+    slope_speed::{insert_slopes, slope_speed_from_records, SlopeSpeed},
+    user_preferences::get_user_preferences,
 };
 #[cfg(feature = "ssr")]
 use crate::state::AppState;
 #[cfg(feature = "ssr")]
 use axum_session_auth::{AuthSession, SessionPgPool};
+#[cfg(feature = "ssr")]
+use chrono::TimeDelta;
 
 #[cfg(feature = "ssr")]
 pub async fn upload_fit_file(
@@ -56,8 +62,6 @@ pub async fn upload_fit_file(
 
 #[cfg(feature = "ssr")]
 async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Result<()> {
-    use crate::models::user_preferences::get_user_preferences;
-
     let mut records: Vec<DatabaseEntry<New, Record>> = Vec::new();
     let mut sessions: Vec<DatabaseEntry<New, Session>> = Vec::new();
     let mut laps: Vec<DatabaseEntry<New, Lap>> = Vec::new();
@@ -100,6 +104,7 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
         }
     }
     if let Some(mut activity) = activity {
+        let preferences = get_user_preferences(user_id, activity.state.start_time, &executor).await;
         let hr_measurements: Vec<_> = records
             .iter()
             .filter_map(|r| r.state.heartrate.and_then(|hr| Some(hr as u32)))
@@ -108,8 +113,6 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
             activity.state.avg_heartrate =
                 Some((hr_measurements.iter().sum::<u32>() / hr_measurements.len() as u32) as u16);
             // calculate training load
-            let preferences =
-                get_user_preferences(user_id, activity.state.start_time, &executor).await;
             activity.state.load = Some(preferences.calculate_load(hr_measurements));
         }
 
@@ -119,17 +122,54 @@ async fn process_fit_file<'a>(data: Bytes, user_id: i64, executor: PgPool) -> Re
             bail!("activity wasn't inserted: {}", x);
         };
         let activity = result.unwrap();
-        let result = insert_records(records, activity.extra.activity_id, &mut *tx).await;
+        let result = insert_records(records.clone(), activity.extra.activity_id, &mut *tx).await;
         if let Err(x) = result {
             bail!("couldn't insert records: {}", x);
         }
-        let result = insert_sessions(sessions, activity.extra.activity_id, &mut *tx).await;
+        let result = insert_sessions(sessions.clone(), activity.extra.activity_id, &mut *tx).await;
         if let Err(x) = result {
             bail!("couldn't insert sessions: {}", x);
         }
         let result = insert_laps(laps, activity.extra.activity_id, &mut *tx).await;
         if let Err(x) = result {
             bail!("couldn't insert laps: {}", x);
+        }
+        //calculate slope
+        let slopes = records
+            .iter()
+            .filter(|r| {
+                r.state.timestamp
+                    > activity
+                        .state
+                        .start_time
+                        .checked_add_signed(TimeDelta::minutes(10))
+                        .unwrap()
+                    && r.state.distance.is_some()
+                    && r.state.altitude.is_some()
+                    && r.state.speed.is_some()
+                    && r.state.heartrate.is_some()
+            })
+            .group_by(|r| (r.state.distance.unwrap() / 100.0).floor())
+            .into_iter()
+            .map(|(_, group)| {
+                slope_speed_from_records(
+                    group.cloned().collect::<Vec<_>>(),
+                    &sessions,
+                    user_id,
+                    &preferences,
+                )
+            })
+            .filter_map(|s| s.ok())
+            .map(|s| DatabaseEntry {
+                state: Box::new(s),
+                extra: New,
+            })
+            .collect::<Vec<DatabaseEntry<New, SlopeSpeed>>>();
+        if slopes.len() > 0 {
+            let result = insert_slopes(slopes, activity.extra.activity_id, &mut *tx).await;
+            if let Err(x) = result {
+                bail!("couldn't insert slope: {}", x)
+            }
         }
         let tx_result = tx.commit().await;
         if let Err(x) = tx_result {

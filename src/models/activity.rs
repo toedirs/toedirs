@@ -28,7 +28,7 @@ impl TryFrom<FitDataRecord> for DatabaseEntry<New, Activity> {
         let fields = value.fields();
         let timestamp = fields
             .iter()
-            .find(|&f| f.name() == "local_timestamp" || f.name() == "timestamp")
+            .find(|&f| f.name() == "timestamp")
             .ok_or(ModelError::ParseError("no timestamp in record".to_string()))?;
         let timestamp = match timestamp.clone().into_value() {
             Value::Timestamp(date) => date,
@@ -77,7 +77,7 @@ pub async fn insert_activity(
     let result = query(
         r#"
         INSERT INTO activities (user_id, start_time, end_time, duration,avg_heartrate,load)
-        VALUES ($1, $2, $3,$4,$5,$6)
+        VALUES ($1, $2::timestamptz, $3::timestamptz,$4,$5,$6)
         RETURNING id
         "#,
     )
