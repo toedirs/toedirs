@@ -50,7 +50,7 @@ pub async fn slope_speed(
         r#"
             SELECT
                 sp.slope::float as slope,
-                AVG(sp.average_speed)::float as speed,
+                ROUND(AVG(sp.average_speed),2)::float as speed,
                 sp.heartrate_zone::text as zone
             FROM slope_speed sp
             WHERE sp.user_id = $1::bigint and sp.start_time >= $2::timestamptz and sp.start_time <= $3::timestamptz
@@ -110,7 +110,7 @@ pub fn SlopeSpeedChart(
                             slope_speed
                                 .iter()
                                 .filter(|s| s.zone == HeartrateZone::Zone1)
-                                .map(|s| vec![s.slope, s.speed])
+                                .map(|s| vec![s.slope, s.speed * 3.6])
                                 .collect(),
                         ),
                     )
@@ -119,7 +119,7 @@ pub fn SlopeSpeedChart(
                             slope_speed
                                 .iter()
                                 .filter(|s| s.zone == HeartrateZone::Zone2)
-                                .map(|s| vec![s.slope, s.speed])
+                                .map(|s| vec![s.slope, s.speed * 3.6])
                                 .collect(),
                         ),
                     )
@@ -128,7 +128,7 @@ pub fn SlopeSpeedChart(
                             slope_speed
                                 .iter()
                                 .filter(|s| s.zone == HeartrateZone::Zone3)
-                                .map(|s| vec![s.slope, s.speed])
+                                .map(|s| vec![s.slope, s.speed * 3.6])
                                 .collect(),
                         ),
                     );
